@@ -1,0 +1,83 @@
+{{define "content"}}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h2 class="mb-3">Order Confirmed!</h2>
+                <p class="lead">Thank you for your purchase. Your order has been successfully placed.</p>
+
+                <div class="alert alert-success">
+                    <strong>Order ID:</strong> {{.OrderID}}
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-shipping-fast me-2"></i>Shipping Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-1"><strong>Status:</strong> <span
+                                        class="badge bg-warning">Processing</span></p>
+                                <p class="mb-1"><strong>Estimated Delivery:</strong> 3-5 business days</p>
+                                <p class="mb-0"><strong>Tracking:</strong> Will be available once shipped</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-1"><strong>Payment Method:</strong> Credit Card</p>
+                                <p class="mb-1"><strong>Payment Status:</strong> <span
+                                        class="badge bg-success">Paid</span></p>
+                                <p class="mb-0"><strong>Total Amount:</strong> $39.98</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="fas fa-box me-2"></i>Order Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <strong>Widget A</strong><br>
+                                        <small class="text-muted">SKU: WIDGET-A</small>
+                                    </div>
+                                    <div class="col-md-2 text-center">
+                                        <span>2</span>
+                                    </div>
+                                    <div class="col-md-2 text-end">
+                                        <span>$39.98</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <a href="/" class="btn btn-primary me-2">
+                            <i class="fas fa-home me-2"></i>Continue Shopping
+                        </a>
+                        <a href="/products" class="btn btn-outline-primary">
+                            <i class="fas fa-box me-2"></i>Browse Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

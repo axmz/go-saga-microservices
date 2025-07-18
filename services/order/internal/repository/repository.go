@@ -1,0 +1,70 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+
+	"github.com/axmz/go-saga-microservices/lib/adapter/db"
+	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
+)
+
+type Repository struct {
+	DB *db.DB
+}
+
+func New(db *db.DB) *Repository {
+	return &Repository{DB: db}
+}
+
+func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
+	tx, err := r.DB.Conn().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `INSERT INTO orders (id, status, created_at, updated_at) VALUES ($1, $2, $3, $4)`,
+		o.ID, o.Status, o.CreatedAt, o.UpdatedAt)
+	if err != nil {
+		return err
+	}
+	for _, item := range o.Items {
+		_, err = tx.ExecContext(ctx, `INSERT INTO order_items (order_id, product_id) VALUES ($1, $2)`,
+			o.ID, item.ProductID)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, error) {
+	row := r.DB.Conn().QueryRowContext(ctx, `SELECT id, status, created_at, updated_at FROM orders WHERE id = $1`, id)
+	var o domain.Order
+	err := row.Scan(&o.ID, &o.Status, &o.CreatedAt, &o.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	rows, err := r.DB.Conn().QueryContext(ctx, `SELECT product_id FROM order_items WHERE order_id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item domain.OrderItem
+		if err := rows.Scan(&item.ProductID); err != nil {
+			return nil, err
+		}
+		o.Items = append(o.Items, item)
+	}
+	return &o, nil
+}
+
+func (r *Repository) UpdateOrder(ctx context.Context, o *domain.Order) error {
+	_, err := r.DB.Conn().ExecContext(ctx, `UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3`, o.Status, o.UpdatedAt, o.ID)
+	return err
+}
