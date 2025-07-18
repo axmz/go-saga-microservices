@@ -36,7 +36,11 @@ services:
 
   inventory-service:
     build:
-      context: ./services/inventory
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: inventory
+        MAIN: main.go
     container_name: inventory-service
     environment:
       - DB_HOST=postgres-inventory
@@ -66,7 +70,11 @@ services:
 
   order-service:
     build:
-      context: ./services/order
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: order
+        MAIN: main.go
     container_name: order-service
     environment:
       - DB_HOST=postgres-order
@@ -83,7 +91,11 @@ services:
 
   storefront-service:
     build:
-      context: ./services/storefront
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: storefront
+        MAIN: main.go
     container_name: storefront-service
     ports:
       - "8080:8080"

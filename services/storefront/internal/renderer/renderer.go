@@ -1,14 +1,17 @@
 package renderer
 
 import (
+	"embed"
 	"errors"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"path/filepath"
 )
 
-const templateBasePath = "templates"
+//go:embed templates/*
+var templatesFS embed.FS
 
 type TemplateCache map[string]*template.Template
 
@@ -19,12 +22,12 @@ type TemplateRenderer struct {
 func NewTemplateCache() (TemplateCache, error) {
 	cache := TemplateCache{}
 
-	layouts, err := filepath.Glob(templateBasePath + "/layouts/*.html")
+	layouts, err := fs.Glob(templatesFS, "templates/layouts/*.html")
 	if err != nil {
 		return nil, err
 	}
 
-	pages, err := filepath.Glob(templateBasePath + "/pages/*.html")
+	pages, err := fs.Glob(templatesFS, "templates/pages/*.html")
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +35,7 @@ func NewTemplateCache() (TemplateCache, error) {
 	for _, page := range pages {
 		files := append(layouts, page)
 		name := filepath.Base(page)
-		tmpl, err := template.ParseFiles(files...)
+		tmpl, err := template.ParseFS(templatesFS, files...)
 		if err != nil {
 			return nil, err
 		}

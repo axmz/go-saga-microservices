@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"storefront-service/internal/renderer"
+	"github.com/axmz/go-saga-microservices/services/storefront/internal/renderer"
 )
 
 type Product struct {
