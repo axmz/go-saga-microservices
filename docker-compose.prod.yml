@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/bitnami/kafka
+
+  postgres-inventory:
+    image: postgres:17.5
+    container_name: postgres-inventory
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventorypass
+      POSTGRES_DB: inventory
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_inventory_data:/var/lib/postgresql/data
+      - ./services/inventory/migrations:/docker-entrypoint-initdb.d
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: inventory
+        MAIN: main.go
+    container_name: inventory-service
+    environment:
+      - DB_HOST=postgres-inventory
+      - DB_PORT=5432
+      - DB_USER=inventory
+      - DB_PASSWORD=inventorypass
+      - DB_NAME=inventory
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - postgres-inventory
+    ports:
+      - "8081:8080"
+
+  postgres-order:
+    image: postgres:17.5
+    container_name: postgres-order
+    environment:
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: orderpass
+      POSTGRES_DB: order
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_order_data:/var/lib/postgresql/data
+      - ./services/order/migrations:/docker-entrypoint-initdb.d
+
+  order-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: order
+        MAIN: main.go
+    container_name: order-service
+    environment:
+      - DB_HOST=postgres-order
+      - DB_PORT=5432
+      - DB_USER=order
+      - DB_PASSWORD=orderpass
+      - DB_NAME=order
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - postgres-order
+    ports:
+      - "8082:8080"
+
+  storefront-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: storefront
+        MAIN: main.go
+    container_name: storefront-service
+    ports:
+      - "8080:8080"
+
+volumes:
+  kafka_data:
+  pg_inventory_data:
+  pg_order_data:

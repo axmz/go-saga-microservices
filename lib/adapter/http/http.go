@@ -22,7 +22,7 @@ type Server struct {
 }
 
 func NewServer(cfg *Config) (*Server, error) {
-	addr := fmt.Sprintf("%s://%s%s", cfg.Protocol, cfg.Host, cfg.Port)
+	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 	r := &http.Server{
 		Addr:         addr,
 		IdleTimeout:  cfg.IdleTimeout,
@@ -30,6 +30,7 @@ func NewServer(cfg *Config) (*Server, error) {
 		WriteTimeout: cfg.WriteTimeout,
 	}
 
+	slog.Info("HTTP server initialized", "addr", addr)
 	return &Server{Router: r}, nil
 }
 

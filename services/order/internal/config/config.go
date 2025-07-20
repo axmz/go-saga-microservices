@@ -42,8 +42,8 @@ func MustLoad() (*Config, error) {
 		GracefulTimeout: getEnvAsDuration("GRACEFUL_TIMEOUT", 2*time.Second),
 		HTTP: http.Config{
 			Protocol:     getEnv("PROTOCOL", "http"),
-			Host:         getEnv("HOST", "localhost"),
-			Port:         getEnv("PORT", ":8080"),
+			Host:         getEnv("HOST", "0.0.0.0"),
+			Port:         getEnv("PORT", "8080"),
 			ReadTimeout:  getEnvAsDuration("READ_TIMEOUT", 5*time.Second),
 			WriteTimeout: getEnvAsDuration("WRITE_TIMEOUT", 10*time.Second),
 			IdleTimeout:  getEnvAsDuration("IDLE_TIMEOUT", 120*time.Second),
@@ -63,6 +63,9 @@ func MustLoad() (*Config, error) {
 		},
 	}
 
+	log.SetOutput(os.Stdout)
+	log.Printf("Loaded configuration: Env=%s, HTTP=%+v, DB=%+v, Kafka=%+v, GracefulTimeout=%v",
+		cfg.Env, cfg.HTTP, cfg.DB, cfg.Kafka, cfg.GracefulTimeout)
 	return cfg, nil
 }
 

@@ -51,6 +51,7 @@ const (
 )
 
 func main() {
+	fmt.Println("Storefront service starting on :8080")
 	renderer := renderer.NewTemplateRenderer()
 
 	mux := http.NewServeMux()
@@ -76,7 +77,7 @@ func main() {
 		orderHandler(w, r, renderer)
 	})
 	mux.HandleFunc("/api/products", apiProductsHandler)
-	mux.HandleFunc("/api/orders", apiCreateOrderHandler)
+	mux.HandleFunc("POST /api/orders", apiCreateOrderHandler)
 
 	log.Println("Storefront service starting on :8080...")
 	if err := http.ListenAndServe(":8080", mux); err != nil {

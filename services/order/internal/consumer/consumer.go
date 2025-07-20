@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
@@ -22,6 +23,7 @@ func New(reader *kafka.Reader, svc *service.Service) *Consumer {
 }
 
 func (c *Consumer) Start(ctx context.Context) {
+	slog.Info("Consumer started")
 	for {
 		m, err := c.Reader.ReadMessage(ctx)
 		if err != nil {

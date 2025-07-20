@@ -36,8 +36,8 @@ func SetupApp(
 	rep := repository.New(db)
 	pub := publisher.New(kfk.Writer)
 	svc := service.New(rep, pub)
-	mux := router.New(svc)
 	con := consumer.New(kfk.Reader, svc)
+	mux := router.New(svc)
 	srv.Router.Handler = mux
 
 	app := &App{
@@ -50,7 +50,6 @@ func SetupApp(
 		Services: svc,
 	}
 
-	app.Log.Info("Application initialized", slog.String("env", app.Config.Env))
-
+	slog.Info("Application initialized", slog.String("env", app.Config.Env))
 	return app, nil
 }

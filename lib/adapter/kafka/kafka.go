@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -36,6 +37,7 @@ func Init(cfg Config) (*Broker, error) {
 		GroupID: groupID,
 	})
 
+	slog.Info("Kafka initialized", "addr", cfg.Addr, "producerTopic", cfg.ProducerTopic, "consumerTopic", cfg.ConsumerTopic, "groupID", cfg.GroupID)
 	return &Broker{
 		Writer: writer,
 		Reader: reader,

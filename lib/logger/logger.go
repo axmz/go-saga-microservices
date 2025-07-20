@@ -24,5 +24,6 @@ func Setup(env string) (*slog.Logger, error) {
 	}
 
 	slog.SetDefault(log)
+	log.Info("Logger initialized", "env", env)
 	return log, nil
 }

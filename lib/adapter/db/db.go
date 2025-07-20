@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+
+	_ "github.com/lib/pq"
 )
 
 type Config struct {
@@ -33,6 +36,7 @@ func Connect(cfg Config) (*DB, error) {
 		return nil, err
 	}
 
+	slog.Info("Database connected", "host", cfg.Host, "port", cfg.Port, "user", cfg.User, "dbname", cfg.Name)
 	return db, nil
 }
 

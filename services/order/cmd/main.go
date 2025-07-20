@@ -39,21 +39,21 @@ func main() {
 	// initialize kafka
 	kafka, err := kafka.Init(cfg.Kafka)
 	if err != nil {
-		logger.Error("Failed to initialize Kafka", "err", err)
+		slog.Error("Failed to initialize Kafka", "err", err)
 		cancel()
 	}
 
 	// initialize http server
 	srv, err := http.NewServer(&cfg.HTTP)
 	if err != nil {
-		logger.Error("Failed to initialize HTTP server", "err", err)
+		slog.Error("Failed to initialize HTTP server", "err", err)
 		cancel()
 	}
 
 	// setup app
 	app, err := app.SetupApp(cfg, logger, db, srv, kafka)
 	if err != nil {
-		app.Log.Error("Failed to initialize app", "err", err)
+		slog.Error("Failed to initialize app", "err", err)
 		cancel()
 	}
 
@@ -70,7 +70,7 @@ func main() {
 	})
 
 	if err = g.Wait(); err != nil {
-		app.Log.Error("Service error, shutting down", slog.String("err", err.Error()))
+		slog.Error("Service error, shutting down", "err", err)
 		cancel()
 	}
 

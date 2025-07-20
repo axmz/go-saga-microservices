@@ -21,9 +21,9 @@ services:
     volumes:
       - kafka_data:/bitnami/kafka
 
-  postgres-inventory:
+  inventory-db:
     image: postgres:17.5
-    container_name: postgres-inventory
+    container_name: inventory-db
     environment:
       POSTGRES_USER: inventory
       POSTGRES_PASSWORD: inventorypass
@@ -37,13 +37,13 @@ services:
   inventory-service:
     build:
       context: .
-      dockerfile: ./infra/service.Dockerfile
+      dockerfile: ./infra/service.dev.Dockerfile
       args:
         SERVICE: inventory
         MAIN: main.go
     container_name: inventory-service
     environment:
-      - DB_HOST=postgres-inventory
+      - DB_HOST=inventory-db
       - DB_PORT=5432
       - DB_USER=inventory
       - DB_PASSWORD=inventorypass
@@ -51,13 +51,41 @@ services:
       - KAFKA_BROKER=kafka:9092
     depends_on:
       - kafka
-      - postgres-inventory
+      - inventory-db
     ports:
       - "8081:8080"
+    develop:
+      watch:
+        - action: sync
+          path: ./services/inventory
+          target: /app/services/inventory
+          ignore:
+            - go.sum
+            - go.mod
+            - tmp/
+        - action: sync
+          path: ./lib
+          target: /app/lib
+        - action: sync
+          path: ./pkg
+          target: /app/pkg
+        - action: rebuild
+          path: ./services/inventory/go.mod
+        - action: rebuild
+          path: ./services/inventory/go.sum
+        - action: rebuild
+          path: ./lib/go.mod
+        - action: rebuild
+          path: ./lib/go.sum
+        - action: rebuild
+          path: ./pkg/go.mod
+        - action: rebuild
+          path: ./pkg/go.sum
+    command: [ "CompileDaemon", "--build=go build -o main ./cmd/main.go", "--command=./main", "--directory=.", "--exclude-dir=tmp", "--pattern=\\.go$|\\.html$" ]
 
-  postgres-order:
+  order-db:
     image: postgres:17.5
-    container_name: postgres-order
+    container_name: order-db
     environment:
       POSTGRES_USER: order
       POSTGRES_PASSWORD: orderpass
@@ -71,13 +99,13 @@ services:
   order-service:
     build:
       context: .
-      dockerfile: ./infra/service.Dockerfile
+      dockerfile: ./infra/service.dev.Dockerfile
       args:
         SERVICE: order
         MAIN: main.go
     container_name: order-service
     environment:
-      - DB_HOST=postgres-order
+      - DB_HOST=order-db
       - DB_PORT=5432
       - DB_USER=order
       - DB_PASSWORD=orderpass
@@ -85,20 +113,82 @@ services:
       - KAFKA_BROKER=kafka:9092
     depends_on:
       - kafka
-      - postgres-order
+      - order-db
     ports:
       - "8082:8080"
+      - "2345:2345"
+    develop:
+      watch:
+        - action: sync
+          path: ./services/order
+          target: /app/services/order
+          ignore:
+            - go.sum
+            - go.mod
+            - tmp/
+        - action: sync
+          path: ./lib
+          target: /app/lib
+        - action: sync
+          path: ./pkg
+          target: /app/pkg
+        - action: rebuild
+          path: ./services/order/go.mod
+        - action: rebuild
+          path: ./services/order/go.sum
+        - action: rebuild
+          path: ./lib/go.mod
+        - action: rebuild
+          path: ./lib/go.sum
+        - action: rebuild
+          path: ./pkg/go.mod
+        - action: rebuild
+          path: ./pkg/go.sum
+    command:
+      - sh
+      - -c
+      - |
+        go build -gcflags="all=-N -l" -o main ./cmd/main.go
+        dlv exec ./main --headless --listen=0.0.0.0:2345 --api-version=2 --accept-multiclient --log
 
   storefront-service:
     build:
       context: .
-      dockerfile: ./infra/service.Dockerfile
+      dockerfile: ./infra/service.dev.Dockerfile
       args:
         SERVICE: storefront
         MAIN: main.go
     container_name: storefront-service
     ports:
       - "8080:8080"
+    develop:
+      watch:
+        - action: sync
+          path: ./services/storefront
+          target: /app/services/storefront
+          ignore:
+            - go.sum
+            - go.mod
+            - tmp/
+        - action: sync
+          path: ./lib
+          target: /app/lib
+        - action: sync
+          path: ./pkg
+          target: /app/pkg
+        - action: rebuild
+          path: ./services/storefront/go.mod
+        - action: rebuild
+          path: ./services/storefront/go.sum
+        - action: rebuild
+          path: ./lib/go.mod
+        - action: rebuild
+          path: ./lib/go.sum
+        - action: rebuild
+          path: ./pkg/go.mod
+        - action: rebuild
+          path: ./pkg/go.sum
+    command: [ "CompileDaemon", "--build=go build -o main ./cmd/main.go", "--command=./main", "--directory=.", "--exclude-dir=tmp", "--pattern=\\.go$|\\.html$" ]
 
 volumes:
   kafka_data:
