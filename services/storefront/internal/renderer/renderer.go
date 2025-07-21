@@ -5,7 +5,6 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
-	"log"
 	"net/http"
 	"path/filepath"
 )
@@ -45,12 +44,12 @@ func NewTemplateCache() (TemplateCache, error) {
 	return cache, nil
 }
 
-func NewTemplateRenderer() *TemplateRenderer {
+func NewTemplateRenderer() (*TemplateRenderer, error) {
 	templates, err := NewTemplateCache()
 	if err != nil {
-		log.Fatal("failed to create TemplateRenderer: ", err)
+		return nil, err
 	}
-	return &TemplateRenderer{templates: templates}
+	return &TemplateRenderer{templates: templates}, nil
 }
 
 func (r *TemplateRenderer) Render(w http.ResponseWriter, name string, data any) error {

@@ -4,22 +4,26 @@ import (
 	"context"
 	"log"
 	"log/slog"
+	"os"
 
+	"github.com/axmz/go-saga-microservices/config"
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
 	"github.com/axmz/go-saga-microservices/lib/adapter/http"
 	"github.com/axmz/go-saga-microservices/lib/adapter/kafka"
 	"github.com/axmz/go-saga-microservices/lib/logger"
 	"github.com/axmz/go-saga-microservices/pkg/graceful"
 	"github.com/axmz/go-saga-microservices/services/order/internal/app"
-	"github.com/axmz/go-saga-microservices/services/order/internal/config"
 	"golang.org/x/sync/errgroup"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	log.SetOutput(os.Stdout)
+	log.Println("Order service starting")
+
 	// load config
-	cfg, err := config.MustLoad()
+	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -31,20 +35,20 @@ func main() {
 	}
 
 	// connect to database
-	db, err := db.Connect(cfg.DB)
+	db, err := db.Connect(db.Config(cfg.Order.DB))
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
 	// initialize kafka
-	kafka, err := kafka.Init(cfg.Kafka)
+	kafka, err := kafka.Init(kafka.Config(cfg.Order.Kafka))
 	if err != nil {
 		slog.Error("Failed to initialize Kafka", "err", err)
 		cancel()
 	}
 
 	// initialize http server
-	srv, err := http.NewServer(&cfg.HTTP)
+	srv, err := http.NewServer((http.Config(cfg.Order.HTTP)))
 	if err != nil {
 		slog.Error("Failed to initialize HTTP server", "err", err)
 		cancel()

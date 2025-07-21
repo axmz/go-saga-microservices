@@ -3,10 +3,10 @@ package app
 import (
 	"log/slog"
 
+	"github.com/axmz/go-saga-microservices/config"
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
 	"github.com/axmz/go-saga-microservices/lib/adapter/http"
 	"github.com/axmz/go-saga-microservices/lib/adapter/kafka"
-	"github.com/axmz/go-saga-microservices/services/order/internal/config"
 	"github.com/axmz/go-saga-microservices/services/order/internal/consumer"
 	"github.com/axmz/go-saga-microservices/services/order/internal/publisher"
 	"github.com/axmz/go-saga-microservices/services/order/internal/repository"

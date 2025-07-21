@@ -21,7 +21,7 @@ type Server struct {
 	Router *http.Server
 }
 
-func NewServer(cfg *Config) (*Server, error) {
+func NewServer(cfg Config) (*Server, error) {
 	addr := fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
 	r := &http.Server{
 		Addr:         addr,

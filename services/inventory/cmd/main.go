@@ -81,14 +81,24 @@ func main() {
 	mux.HandleFunc("GET /products/{id}", getProduct) // Note: path param parsing must be handled manually
 	mux.HandleFunc("PUT /products/{id}/status", updateStatus)
 
-	log.Println("Inventory service starting on :8080...")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	// Use env vars for host/port
+	host := getEnv("INVENTORY_SERVICE_HOST", "localhost")
+	port := getEnv("INVENTORY_SERVICE_PORT", "8081")
+	addr := fmt.Sprintf("%s:%s", host, port)
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	log.Printf("Inventory service starting on %s...", addr)
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
 }
 
 func initDB() {
-	host := getEnv("DB_HOST", "localhost")
+	host := getEnv("DB_HOST", "inventory-db")
 	port := getEnv("DB_PORT", "5432")
 	user := getEnv("DB_USER", "inventory")
 	password := getEnv("DB_PASSWORD", "inventorypass")
@@ -111,7 +121,7 @@ func initDB() {
 }
 
 func initKafka() {
-	kafkaBroker := getEnv("KAFKA_BROKER", "localhost:9092")
+	kafkaBroker := getEnv("KAFKA_BROKER", "kafka:9092")
 
 	kafkaWriter = &kafka.Writer{
 		Addr:     kafka.TCP(kafkaBroker),

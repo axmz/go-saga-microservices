@@ -1,4 +1,9 @@
-.PHONY: build run test clean docker-build docker-run
+.PHONY: dev build run test clean docker-build docker-run
+
+# Development with Air (hot reload)
+dev:
+	@echo "Starting order service with Air..."
+	@air
 
 # Build the application
 build:
