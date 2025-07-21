@@ -15,12 +15,12 @@ import (
 var envFiles embed.FS
 
 type HttpServerConfig struct {
-	Protocol     string
-	Host         string
-	Port         string
-	IdleTimeout  time.Duration
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	Protocol     string        `yaml:"protocol"`
+	Host         string        `yaml:"host"`
+	Port         string        `yaml:"port"`
+	IdleTimeout  time.Duration `yaml:"idleTimeout"`
+	ReadTimeout  time.Duration `yaml:"readTimeout"`
+	WriteTimeout time.Duration `yaml:"writeTimeout"`
 }
 
 func (h HttpServerConfig) URL() string {
@@ -28,39 +28,39 @@ func (h HttpServerConfig) URL() string {
 }
 
 type DBConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Name     string
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Name     string `yaml:"name"`
 }
 
 type KafkaConfig struct {
-	Addr          string
-	ProducerTopic string
-	ConsumerTopic string
-	GroupID       string
+	Addr          string `yaml:"addr"`
+	ProducerTopic string `yaml:"producerTopic"`
+	ConsumerTopic string `yaml:"consumerTopic"`
+	GroupID       string `yaml:"groupID"`
 }
 
 type Config struct {
-	Env             string
-	GracefulTimeout time.Duration
+	Env             string        `yaml:"env"`
+	GracefulTimeout time.Duration `yaml:"gracefulTimeout"`
 
 	Inventory struct {
-		HTTP  HttpServerConfig
-		DB    DBConfig
-		Kafka KafkaConfig
-	}
+		HTTP  HttpServerConfig `yaml:"http"`
+		DB    DBConfig         `yaml:"db"`
+		Kafka KafkaConfig      `yaml:"kafka"`
+	} `yaml:"inventory"`
 
 	Order struct {
-		HTTP  HttpServerConfig
-		DB    DBConfig
-		Kafka KafkaConfig
-	}
+		HTTP  HttpServerConfig `yaml:"http"`
+		DB    DBConfig         `yaml:"db"`
+		Kafka KafkaConfig      `yaml:"kafka"`
+	} `yaml:"order"`
 
 	Storefront struct {
-		HTTP HttpServerConfig
-	}
+		HTTP HttpServerConfig `yaml:"http"`
+	} `yaml:"storefront"`
 }
 
 func Load() (*Config, error) {

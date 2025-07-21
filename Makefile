@@ -48,7 +48,7 @@ inventory i:
 
 order o:
 	@echo "Starting order service with Air..."
-	@cd services/order && make dev
+	@cd services/order && make run
 
 storefront s:
 	@echo "Starting storefront service with Air..."
