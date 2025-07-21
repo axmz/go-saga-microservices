@@ -1,0 +1,14 @@
+go 1.24.4
+
+use (
+	./lib/adapter/db
+	./lib/adapter/http
+	./lib/adapter/kafka
+	./services/storefront
+	./services/order
+	./services/inventory
+	./services/payment
+	./lib/logger
+	./pkg/graceful
+	./config
+)

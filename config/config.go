@@ -1,17 +1,17 @@
 package config
 
 import (
-	"bufio"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
-//go:embed .env.*
+//go:embed config.yaml
 var envFiles embed.FS
 
 type HttpServerConfig struct {
@@ -64,7 +64,16 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	if err := loadEnvFileFromEmbed(".env.common"); err != nil {
+	// Open the embedded YAML config file
+	f, err := envFiles.Open("config.yaml")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// Load the whole YAML into a map for merging
+	var layered map[string]map[string]interface{}
+	if err := yaml.NewDecoder(f).Decode(&layered); err != nil {
 		return nil, err
 	}
 
@@ -72,124 +81,26 @@ func Load() (*Config, error) {
 	if envName == "" {
 		envName = "dev"
 	}
-	if err := loadEnvFileFromEmbed(".env." + envName); err != nil {
+
+	// Merge common and env-specific configs
+	merged := deepCopyMap(layered["common"])
+	if envSection, ok := layered[envName]; ok {
+		mergeMaps(merged, envSection)
+	}
+
+	// Marshal merged map back to YAML, then unmarshal into Config struct
+	mergedYAML, err := yaml.Marshal(merged)
+	if err != nil {
 		return nil, err
 	}
 
-	cfg := &Config{
-		Env:             getEnv("GO_ENV", "dev"),
-		GracefulTimeout: getEnvDuration("GRACEFUL_TIMEOUT", 2*time.Second),
-		Inventory: struct {
-			HTTP  HttpServerConfig
-			DB    DBConfig
-			Kafka KafkaConfig
-		}{
-			HTTP: HttpServerConfig{
-				Host:         getEnv("INVENTORY_HOST", "localhost"),
-				Port:         getEnv("INVENTORY_PORT", "8081"),
-				Protocol:     getEnv("INVENTORY_PROTOCOL", "http"),
-				ReadTimeout:  getEnvDuration("INVENTORY_READ_TIMEOUT", 10*time.Second),
-				WriteTimeout: getEnvDuration("INVENTORY_WRITE_TIMEOUT", 10*time.Second),
-				IdleTimeout:  getEnvDuration("INVENTORY_IDLE_TIMEOUT", 10*time.Second),
-			},
-			DB: DBConfig{
-				Host:     getEnv("INVENTORY_DB_HOST", "localhost"),
-				Port:     getEnv("INVENTORY_DB_PORT", "5432"),
-				User:     getEnv("INVENTORY_DB_USER", "postgres"),
-				Password: getEnv("INVENTORY_DB_PASSWORD", "postgres"),
-				Name:     getEnv("INVENTORY_DB_NAME", "postgres"),
-			},
-			Kafka: KafkaConfig{
-				Addr:          getEnv("INVENTORY_KAFKA_ADDR", "localhost:9092"),
-				ProducerTopic: getEnv("INVENTORY_KAFKA_PRODUCER_TOPIC", "inventory.reserved"),
-				ConsumerTopic: getEnv("INVENTORY_KAFKA_CONSUMER_TOPIC", "orders.created,payments.failed"),
-				GroupID:       getEnv("INVENTORY_KAFKA_GROUP_ID", "inventory-service"),
-			},
-		},
-		Order: struct {
-			HTTP  HttpServerConfig
-			DB    DBConfig
-			Kafka KafkaConfig
-		}{
-			HTTP: HttpServerConfig{
-				Host:         getEnv("ORDER_HOST", "localhost"),
-				Port:         getEnv("ORDER_PORT", "8082"),
-				Protocol:     getEnv("ORDER_PROTOCOL", "http"),
-				ReadTimeout:  getEnvDuration("ORDER_READ_TIMEOUT", 10*time.Second),
-				WriteTimeout: getEnvDuration("ORDER_WRITE_TIMEOUT", 10*time.Second),
-				IdleTimeout:  getEnvDuration("ORDER_IDLE_TIMEOUT", 10*time.Second),
-			},
-			DB: DBConfig{
-				Host:     getEnv("ORDER_DB_HOST", "localhost"),
-				Port:     getEnv("ORDER_DB_PORT", "5432"),
-				User:     getEnv("ORDER_DB_USER", "postgres"),
-				Password: getEnv("ORDER_DB_PASSWORD", "postgres"),
-				Name:     getEnv("ORDER_DB_NAME", "postgres"),
-			},
-			Kafka: KafkaConfig{
-				Addr:          getEnv("ORDER_KAFKA_BROKER", "localhost:9092"),
-				ProducerTopic: getEnv("ORDER_KAFKA_WRITER_TOPIC", "order-events"),
-				ConsumerTopic: getEnv("ORDER_KAFKA_READER_TOPIC", "inventory-events,payment-events"),
-				GroupID:       getEnv("ORDER_KAFKA_GROUP_ID", "order-service-group"),
-			},
-		},
-		Storefront: struct {
-			HTTP HttpServerConfig
-		}{
-			HTTP: HttpServerConfig{
-				Host:         getEnv("STOREFRONT_HOST", "localhost"),
-				Port:         getEnv("STOREFRONT_PORT", "8080"),
-				Protocol:     getEnv("STOREFRONT_PROTOCOL", "http"),
-				ReadTimeout:  getEnvDuration("STOREFRONT_READ_TIMEOUT", 10*time.Second),
-				WriteTimeout: getEnvDuration("STOREFRONT_WRITE_TIMEOUT", 10*time.Second),
-				IdleTimeout:  getEnvDuration("STOREFRONT_IDLE_TIMEOUT", 10*time.Second),
-			},
-		},
+	var cfg Config
+	if err := yaml.Unmarshal(mergedYAML, &cfg); err != nil {
+		return nil, err
 	}
 
 	log.Printf("Config loaded: %v", prettyPrint(cfg))
-	return cfg, nil
-}
-
-// loadEnvFileFromEmbed loads env file from the embedded FS
-func loadEnvFileFromEmbed(filename string) error {
-	f, err := envFiles.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.Trim(strings.TrimSpace(parts[1]), `"`)
-		os.Setenv(key, value)
-	}
-	return nil
-}
-
-func getEnv(key, defaultVal string) string {
-	if val, exists := os.LookupEnv(key); exists {
-		return val
-	}
-	return defaultVal
-}
-
-func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
-	if valStr, ok := os.LookupEnv(key); ok {
-		if d, err := time.ParseDuration(valStr); err == nil {
-			return d
-		}
-	}
-	return defaultVal
+	return &cfg, nil
 }
 
 func prettyPrint(v interface{}) string {
@@ -198,5 +109,33 @@ func prettyPrint(v interface{}) string {
 		return fmt.Sprintln("error:", err)
 	} else {
 		return fmt.Sprintln(string(b))
+	}
+}
+
+// deepCopyMap creates a deep copy of a map[string]interface{}
+func deepCopyMap(src map[string]interface{}) map[string]interface{} {
+	copy := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		if m, ok := v.(map[string]interface{}); ok {
+			copy[k] = deepCopyMap(m)
+		} else {
+			copy[k] = v
+		}
+	}
+	return copy
+}
+
+// mergeMaps overlays src into dst recursively
+func mergeMaps(dst, src map[string]interface{}) {
+	for k, v := range src {
+		if vMap, ok := v.(map[string]interface{}); ok {
+			if dstMap, ok := dst[k].(map[string]interface{}); ok {
+				mergeMaps(dstMap, vMap)
+			} else {
+				dst[k] = deepCopyMap(vMap)
+			}
+		} else {
+			dst[k] = v
+		}
 	}
 }

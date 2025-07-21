@@ -5,3 +5,5 @@ next.js
 update graceful
 move config to yml
 attach debugger
+yml config
+apply configs from adapters

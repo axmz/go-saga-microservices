@@ -1,0 +1,55 @@
+common:
+  env: dev
+  gracefulTimeout: 2s
+  inventory:
+    http:
+      protocol: http
+      host: localhost
+      port: "8081"
+      idleTimeout: 10s
+      readTimeout: 10s
+      writeTimeout: 10s
+    db:
+      host: inventory-db
+      port: "5432"
+      user: inventory
+      password: inventory
+      name: inventory
+    kafka:
+      addr: kafka:9092
+      producerTopic: inventory.reserved
+      consumerTopic: orders.created,payments.failed
+      groupID: inventory-service
+  order:
+    http:
+      protocol: http
+      host: localhost
+      port: "8082"
+      idleTimeout: 10s
+      readTimeout: 10s
+      writeTimeout: 10s
+    db:
+      host: order-db
+      port: "5432"
+      user: order
+      password: order
+      name: order
+    kafka:
+      addr: kafka:9092
+      producerTopic: order-events
+      consumerTopic: inventory-events,payment-events
+      groupID: order-service-group
+  storefront:
+    http:
+      protocol: http
+      host: localhost
+      port: "8080"
+      idleTimeout: 10s
+      readTimeout: 10s
+      writeTimeout: 10s
+
+dev:
+  env: dev
+
+prod:
+  env: prod
