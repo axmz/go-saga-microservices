@@ -36,10 +36,10 @@ type DBConfig struct {
 }
 
 type KafkaConfig struct {
-	Addr          string `yaml:"addr"`
-	ProducerTopic string `yaml:"producerTopic"`
-	ConsumerTopic string `yaml:"consumerTopic"`
-	GroupID       string `yaml:"groupID"`
+	Addr          string   `yaml:"addr"`
+	ProducerTopic string   `yaml:"producerTopic"`
+	GroupTopics   []string `yaml:"groupTopics"`
+	GroupID       string   `yaml:"groupID"`
 }
 
 type Config struct {
@@ -79,7 +79,7 @@ func Load() (*Config, error) {
 
 	envName := os.Getenv("GO_ENV")
 	if envName == "" {
-		envName = "dev"
+		envName = "local"
 	}
 
 	// Merge common and env-specific configs

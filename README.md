@@ -8,3 +8,4 @@ attach debugger
 yml config
 apply configs from adapters
 replace air
+start multiple

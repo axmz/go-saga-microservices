@@ -35,7 +35,7 @@ func NewServer(cfg Config) (*Server, error) {
 }
 
 func (s *Server) Run() error {
-	slog.Info(fmt.Sprintf("Starting server on %s", s.Router.Addr))
+	slog.Info("Starting server", "addr", s.Router.Addr)
 	if err := s.Router.ListenAndServe(); err != http.ErrServerClosed {
 		return fmt.Errorf("HTTP server ListenAndServe: %v", err)
 	}

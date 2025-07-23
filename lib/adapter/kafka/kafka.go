@@ -10,7 +10,7 @@ import (
 type Config struct {
 	Addr          string
 	ProducerTopic string
-	ConsumerTopic string
+	GroupTopics   []string
 	GroupID       string
 }
 
@@ -22,7 +22,7 @@ type Broker struct {
 func Init(cfg Config) (*Broker, error) {
 	Addr := cfg.Addr
 	producerTopic := cfg.ProducerTopic
-	consumerTopic := cfg.ConsumerTopic
+	groupTopics := cfg.GroupTopics
 	groupID := cfg.GroupID
 
 	writer := &kafka.Writer{
@@ -32,12 +32,12 @@ func Init(cfg Config) (*Broker, error) {
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{Addr},
-		Topic:   consumerTopic,
-		GroupID: groupID,
+		Brokers:     []string{Addr},
+		GroupTopics: groupTopics,
+		GroupID:     groupID,
 	})
 
-	slog.Info("Kafka initialized", "addr", cfg.Addr, "producerTopic", cfg.ProducerTopic, "consumerTopic", cfg.ConsumerTopic, "groupID", cfg.GroupID)
+	slog.Info("Kafka initialized", "addr", cfg.Addr, "producerTopic", cfg.ProducerTopic, "consumerTopic", cfg.GroupTopics, "groupID", cfg.GroupID)
 	return &Broker{
 		Writer: writer,
 		Reader: reader,

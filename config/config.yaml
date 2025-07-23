@@ -1,6 +1,14 @@
 common:
-  env: dev
+  env: local
   gracefulTimeout: 2s
+  storefront:
+    http:
+      protocol: http
+      host: localhost
+      port: "8080"
+      idleTimeout: 10s
+      readTimeout: 10s
+      writeTimeout: 10s
   inventory:
     http:
       protocol: http
@@ -18,8 +26,10 @@ common:
     kafka:
       addr: kafka:9092
       producerTopic: inventory.reserved
-      consumerTopic: orders.created,payments.failed
-      groupID: inventory-service
+      groupTopics: 
+        - orders.created
+        - payments.failed
+      groupID: inventory-service-group
   order:
     http:
       protocol: http
@@ -37,16 +47,10 @@ common:
     kafka:
       addr: kafka:9092
       producerTopic: order-events
-      consumerTopic: inventory-events,payment-events
+      groupTopics: 
+        - inventory-events
+        - payment-events
       groupID: order-service-group
-  storefront:
-    http:
-      protocol: http
-      host: localhost
-      port: "8080"
-      idleTimeout: 10s
-      readTimeout: 10s
-      writeTimeout: 10s
 
 dev:
   env: dev

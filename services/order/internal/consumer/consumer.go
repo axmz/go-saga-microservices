@@ -3,9 +3,12 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"log/slog"
 	"time"
+
+	"errors"
 
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/axmz/go-saga-microservices/services/order/internal/repository"
@@ -22,12 +25,18 @@ func New(reader *kafka.Reader, svc *service.Service) *Consumer {
 	return &Consumer{Reader: reader, Repo: svc.Repo}
 }
 
-func (c *Consumer) Start(ctx context.Context) {
+func (c *Consumer) Start(ctx context.Context) error {
 	slog.Info("Consumer started")
 	for {
+		time.Sleep(time.Millisecond * 1500)
 		m, err := c.Reader.ReadMessage(ctx)
 		if err != nil {
-			log.Printf("Kafka read error: %v", err)
+			if errors.Is(err, kafka.ErrGroupClosed) ||
+				errors.Is(err, io.EOF) ||
+				ctx.Err() != nil {
+				return err
+			}
+			slog.Warn("Kafka read error:", "err", err)
 			continue
 		}
 		var evt map[string]interface{}
