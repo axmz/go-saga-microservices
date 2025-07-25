@@ -24,10 +24,6 @@ func New(service *service.Service) *OrderHandler {
 
 // POST /orders
 func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	var req struct {
 		Items []domain.OrderItem `json:"items"`
 	}
@@ -40,16 +36,10 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ord := domain.NewOrder(req.Items)
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	if err := h.Service.CreateOrder(ctx, ord); err != nil {
+	if err := h.Service.CreateOrder(r.Context(), ord); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// if err := h.Service.Kafka.PublishOrderCreated(ctx, ord.ID, ord.Items, ord.Status); err != nil {
-	// 	http.Error(w, "Order created but failed to emit event", http.StatusInternalServerError)
-	// 	return
-	// }
 	log.Printf("[OrderService] Created order: %s, status: %s", ord.ID, ord.Status)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

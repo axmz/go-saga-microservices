@@ -26,9 +26,10 @@ func Init(cfg Config) (*Broker, error) {
 	groupID := cfg.GroupID
 
 	writer := &kafka.Writer{
-		Addr:     kafka.TCP(Addr),
-		Topic:    producerTopic,
-		Balancer: &kafka.LeastBytes{},
+		AllowAutoTopicCreation: true,
+		Addr:                   kafka.TCP(Addr),
+		Topic:                  producerTopic,
+		Balancer:               &kafka.LeastBytes{},
 	}
 
 	reader := kafka.NewReader(kafka.ReaderConfig{

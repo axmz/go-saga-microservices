@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -17,17 +18,13 @@ func New(writer *kafka.Writer) *Publisher {
 }
 
 type OrderCreatedEvent struct {
-	OrderID string      `json:"orderId"`
-	Items   interface{} `json:"items"`
-	Status  string      `json:"status"`
-	Time    time.Time   `json:"timestamp"`
+	OrderID string    `json:"orderId"`
+	Time    time.Time `json:"timestamp"`
 }
 
-func (p *Publisher) PublishOrderCreated(ctx context.Context, orderID string, items interface{}, status string) error {
+func (p *Publisher) PublishOrderCreated(ctx context.Context, order *domain.Order) error {
 	event := OrderCreatedEvent{
-		OrderID: orderID,
-		Items:   items,
-		Status:  status,
+		OrderID: order.ID,
 		Time:    time.Now(),
 	}
 	value, err := json.Marshal(event)
@@ -35,7 +32,7 @@ func (p *Publisher) PublishOrderCreated(ctx context.Context, orderID string, ite
 		return err
 	}
 	return p.Writer.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(orderID),
+		Key:   []byte(order.ID),
 		Value: value,
 	})
 }

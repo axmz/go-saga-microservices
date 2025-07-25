@@ -18,6 +18,7 @@ import (
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
 
 	log.SetOutput(os.Stdout)
 	log.Println("Order service starting")
@@ -61,7 +62,6 @@ func main() {
 		cancel()
 	}
 
-	var wg sync.WaitGroup
 	// HTTP server
 	wg.Add(1)
 	go func() {

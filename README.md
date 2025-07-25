@@ -3,9 +3,7 @@ auto release reserved after timeout
 next.js
 
 update graceful
-move config to yml
-attach debugger
-yml config
 apply configs from adapters
-replace air
 start multiple
+formalize http responses
+improve log, add service name

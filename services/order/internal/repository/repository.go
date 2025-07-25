@@ -18,25 +18,20 @@ func New(db *db.DB) *Repository {
 }
 
 func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
-	tx, err := r.DB.Conn().BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.ExecContext(ctx, `INSERT INTO orders (id, status, created_at, updated_at) VALUES ($1, $2, $3, $4)`,
-		o.ID, o.Status, o.CreatedAt, o.UpdatedAt)
-	if err != nil {
-		return err
-	}
-	for _, item := range o.Items {
-		_, err = tx.ExecContext(ctx, `INSERT INTO order_items (order_id, product_id) VALUES ($1, $2)`,
-			o.ID, item.ProductID)
-		if err != nil {
-			return err
+	var itemIDs string
+	for i, item := range o.Items {
+		if i > 0 {
+			itemIDs += ","
 		}
+		itemIDs += item.ProductID
 	}
-	return tx.Commit()
+	q := `INSERT INTO orders (id, item_ids, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.DB.Conn().ExecContext(ctx, q, o.ID, itemIDs, o.Status, o.CreatedAt, o.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, error) {
