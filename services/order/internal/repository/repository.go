@@ -50,7 +50,7 @@ func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, er
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var item domain.OrderItem
+		var item domain.Item
 		if err := rows.Scan(&item.ProductID); err != nil {
 			return nil, err
 		}

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package events;
+
+option go_package = "github.com/axmz/go-saga-microservices/pkg/events;events";
+
+message Item {
+  string id = 1;
+}
+
+message OrderCreatedEvent {
+  string id = 1;
+  repeated Item items = 2;
+  string type = 3; // optional: for event type switching
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_SUCCESS = 1;
+  STATUS_FAILED = 2;
+}
+
+message ReserveProductsEvent {
+  string id = 1;
+  Status status = 2;
+}

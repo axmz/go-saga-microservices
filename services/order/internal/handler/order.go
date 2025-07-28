@@ -25,7 +25,7 @@ func New(service *service.Service) *OrderHandler {
 // POST /orders
 func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Items []domain.OrderItem `json:"items"`
+		Items []domain.Item `json:"items"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

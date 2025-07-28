@@ -10,5 +10,6 @@ use (
 	./services/payment
 	./lib/logger
 	./pkg/graceful
+	./pkg/events
 	./config
 )

@@ -7,3 +7,7 @@ apply configs from adapters
 start multiple
 formalize http responses
 improve log, add service name
+fix DB.Conn()
+protobuf
+use interfaces
+review makefile

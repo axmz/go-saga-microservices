@@ -60,3 +60,22 @@ clean c:
 	@find . -name "tmp" -type d -exec rm -rf {} + 2>/dev/null || true
 	@find . -name "*.exe" -delete 2>/dev/null || true
 	@find . -name "*.out" -delete 2>/dev/null || true 
+
+# Protobuf generation using buf.build
+.PHONY: buf-install buf-gen
+
+# Install buf CLI and protoc-gen-go if not present
+buf-install:
+	@if ! command -v buf >/dev/null 2>&1; then \
+		echo "Installing buf CLI..."; \
+		GO111MODULE=on go install github.com/bufbuild/buf/cmd/buf@latest; \
+	else \
+		echo "buf already installed"; \
+	fi
+
+# Generate Go code from proto files using buf
+buf-gen: buf-install
+	@echo "Generating Go code from proto files using buf..."
+	@buf generate
+	@echo "go mod tidy in pkg/events"
+	@cd ./pkg/events && go mod tidy

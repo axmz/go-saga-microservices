@@ -14,18 +14,18 @@ const (
 )
 
 type Order struct {
-	ID        string      `json:"id"`
-	Items     []OrderItem `json:"items"`
-	Status    string      `json:"status"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	ID        string    `json:"id"`
+	Items     []Item    `json:"items"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
-type OrderItem struct {
+type Item struct {
 	ProductID string `json:"product_id"`
 }
 
-func NewOrder(items []OrderItem) *Order {
+func NewOrder(items []Item) *Order {
 	id := uuid.New().String()
 	now := time.Now()
 	return &Order{

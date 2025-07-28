@@ -3,8 +3,8 @@ package publisher
 import (
 	"context"
 	"encoding/json"
-	"time"
 
+	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/segmentio/kafka-go"
 )
@@ -17,17 +17,18 @@ func New(writer *kafka.Writer) *Publisher {
 	return &Publisher{Writer: writer}
 }
 
-type OrderCreatedEvent struct {
-	OrderID string    `json:"orderId"`
-	Time    time.Time `json:"timestamp"`
-}
-
 func (p *Publisher) PublishOrderCreated(ctx context.Context, order *domain.Order) error {
-	event := OrderCreatedEvent{
-		OrderID: order.ID,
-		Time:    time.Now(),
+	items := make([]*events.Item, len(order.Items))
+	for i, item := range order.Items {
+		items[i] = &events.Item{
+			Id: item.ProductID,
+		}
 	}
-	value, err := json.Marshal(event)
+	event := events.OrderCreatedEvent{
+		Id:    order.ID,
+		Items: items,
+	}
+	value, err := json.Marshal(&event)
 	if err != nil {
 		return err
 	}
