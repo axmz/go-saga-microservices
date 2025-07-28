@@ -25,10 +25,10 @@ common:
       name: inventory
     kafka:
       addr: kafka:9092
-      producerTopic: inventory.reserved
-      groupTopics: 
-        - orders.created
-        - payments.failed
+      producerTopic: inventory.events 
+      groupTopics:
+        - order.events
+        - payment.events
       groupID: inventory-service-group
   order:
     http:
@@ -46,10 +46,10 @@ common:
       name: order
     kafka:
       addr: kafka:9092
-      producerTopic: order-events
-      groupTopics: 
-        - inventory-events
-        - payment-events
+      producerTopic: order.events
+      groupTopics:
+        - inventory.events 
+        - payment.events
       groupID: order-service-group
 
 dev:

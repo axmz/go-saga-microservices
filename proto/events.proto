@@ -8,19 +8,43 @@ message Item {
   string id = 1;
 }
 
+message OrderEventEnvelope {
+  oneof event {
+    OrderCreatedEvent order_created = 1;
+  }
+}
+
 message OrderCreatedEvent {
   string id = 1;
   repeated Item items = 2;
-  string type = 3; // optional: for event type switching
 }
 
-enum Status {
-  STATUS_UNSPECIFIED = 0;
-  STATUS_SUCCESS = 1;
-  STATUS_FAILED = 2;
+message InventoryEventEnvelope {
+  oneof event {
+    InventoryReservationSucceeded reservation_succeeded = 1;
+    InventoryReservationFailed reservation_failed = 2;
+  }
 }
 
-message ReserveProductsEvent {
+message InventoryReservationSucceeded {
   string id = 1;
-  Status status = 2;
+}
+
+message InventoryReservationFailed {
+  string id = 1;
+}
+
+message PaymentEventEnvelope {
+  oneof event {
+    PaymentSucceeded payment_succeeded = 1;
+    PaymentFailed payment_failed = 2;
+  }
+}
+
+message PaymentSucceeded {
+  string id = 1;
+}
+
+message PaymentFailed {
+  string id = 1;
 }

@@ -3,10 +3,13 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/axmz/go-saga-microservices/inventory-service/internal/service"
 	"github.com/axmz/go-saga-microservices/pkg/events"
+	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
 )
 
 type InventoryHandler struct {
@@ -30,9 +33,46 @@ func (h *InventoryHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(products)
 }
 
-func (h *InventoryHandler) HandleOrderCreatedEvent(ctx context.Context, event *events.OrderCreatedEvent) {
-	h.Service.ReserveItems(ctx, event)
+func (h *InventoryHandler) OrderEvents(ctx context.Context, event kafka.Message) {
+	var envelope events.OrderEventEnvelope
+
+	err := proto.Unmarshal(event.Value, &envelope)
+	if err != nil {
+		log.Printf("failed to unmarshal OrderEventEnvelope: %v", err)
+		return
+	}
+
+	switch evt := envelope.Event.(type) {
+	case *events.OrderEventEnvelope_OrderCreated:
+		id := evt.OrderCreated.Id
+		log.Printf("InventoryReservationRequested: order id = %s", id)
+		h.Service.ReserveItems(ctx, evt.OrderCreated)
+	default:
+		log.Printf("Unknown or missing event type in envelope")
+	}
 }
 
-func (h *InventoryHandler) HandlePaymentFailedEvent(ctx context.Context, event *events.OrderCreatedEvent) {
+func (h *InventoryHandler) PaymentEvents(ctx context.Context, message kafka.Message) {
+	var envelope events.PaymentEventEnvelope
+	data := message.Value
+
+	err := proto.Unmarshal(data, &envelope)
+	if err != nil {
+		log.Printf("failed to unmarshal InventoryEventEnvelope: %v", err)
+		return
+	}
+
+	switch evt := envelope.Event.(type) {
+	case *events.PaymentEventEnvelope_PaymentFailed:
+		orderID := evt.PaymentFailed.Id
+		log.Printf("InventoryReservationSucceeded: order id = %s", orderID)
+		h.Service.ReleaseReservedItems(ctx, orderID)
+
+	case *events.PaymentEventEnvelope_PaymentSucceeded:
+		log.Printf("InventoryReservationSucceeded: order id = %s", evt.PaymentSucceeded.Id)
+
+	default:
+		log.Printf("Unknown or missing event type in envelope")
+	}
+
 }

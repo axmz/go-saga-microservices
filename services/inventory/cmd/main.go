@@ -21,7 +21,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	log.SetOutput(os.Stdout)
-	log.Println("Order service starting")
+	log.Println("Inventory service starting")
 
 	// load config
 	cfg, err := config.Load()
@@ -36,20 +36,20 @@ func main() {
 	}
 
 	// connect to database
-	db, err := db.Connect(db.Config(cfg.Order.DB))
+	db, err := db.Connect(db.Config(cfg.Inventory.DB))
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
 	// initialize kafka
-	kafka, err := kafka.Init(kafka.Config(cfg.Order.Kafka))
+	kafka, err := kafka.Init(kafka.Config(cfg.Inventory.Kafka))
 	if err != nil {
 		slog.Error("Failed to initialize Kafka:", "err", err)
 		cancel()
 	}
 
 	// initialize http server
-	srv, err := http.NewServer((http.Config(cfg.Order.HTTP)))
+	srv, err := http.NewServer((http.Config(cfg.Inventory.HTTP)))
 	if err != nil {
 		slog.Error("Failed to initialize HTTP server:", "err", err)
 		cancel()

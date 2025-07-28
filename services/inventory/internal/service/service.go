@@ -27,13 +27,17 @@ func (s *Service) GetProducts(ctx context.Context) ([]domain.Product, error) {
 
 func (s *Service) ReserveItems(ctx context.Context, event *events.OrderCreatedEvent) error {
 	if err := s.Repo.ReserveItems(ctx, event.Items); err != nil {
-		s.Kafka.PublishReserveProductsEvent(event.Id, events.EventStatus_STATUS_FAILED)
+		s.Kafka.PublishInventoryReservationFailedEvent(event.Id)
 		return err
 	}
-	s.Kafka.PublishReserveProductsEvent(event.Id, events.EventStatus_STATUS_SUCCESS)
+	s.Kafka.PublishInventoryReservationSucceededEvent(event.Id)
 	return nil
 }
 
 func (s *Service) ReleaseItems(ctx context.Context) {
 	// return s.Repo.ReleaseItems(orderID, productID)
+}
+
+func (s *Service) ReleaseReservedItems(ctx context.Context, orderID string) error {
+	return s.Repo.ReleaseReservedItems(ctx, orderID)
 }

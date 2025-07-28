@@ -18,8 +18,8 @@ func New(db *db.DB) *Repository {
 }
 
 func (r *Repository) GetProducts(ctx context.Context) ([]domain.Product, error) {
-	query := `SELECT id, name, sku, status, price 
-			  FROM products 
+	query := `SELECT id, name, sku, status, price
+			  FROM products
 			  ORDER BY name`
 	rows, err := r.DB.Conn().QueryContext(ctx, query)
 	if err != nil {
@@ -78,8 +78,8 @@ func (r *Repository) ReserveItems(ctx context.Context, items []*events.Item) err
 	}
 
 	// All available, reserve them
-	reserveQuery := `UPDATE products 
-		SET status = 'reserved', updated_at = CURRENT_TIMESTAMP 
+	reserveQuery := `UPDATE products
+		SET status = 'reserved', updated_at = CURRENT_TIMESTAMP
 		WHERE sku = ANY($1) AND status = 'available'`
 	_, err = tx.ExecContext(ctx, reserveQuery, skus)
 	if err != nil {
@@ -90,11 +90,19 @@ func (r *Repository) ReserveItems(ctx context.Context, items []*events.Item) err
 }
 
 func (r *Repository) ReleaseItems(orderID, productID string) {
-	query := `UPDATE products 
-			  SET status = 'available', updated_at = CURRENT_TIMESTAMP 
+	query := `UPDATE products
+			  SET status = 'available', updated_at = CURRENT_TIMESTAMP
 			  WHERE sku = $1 AND status = 'reserved'`
 	_, err := r.DB.Conn().Exec(query, productID)
 	if err != nil {
 		// Handle error (e.g., log it)
 	}
+}
+
+func (r *Repository) ReleaseReservedItems(ctx context.Context, orderID string) error {
+	// Note: This is a basic implementation. In a real system, we would need
+	// a reservation table to track which products were reserved for which order.
+	// For now, this is a no-op since we don't have order-to-product tracking.
+	// In production, this would need proper order-product reservation tracking.
+	return nil
 }

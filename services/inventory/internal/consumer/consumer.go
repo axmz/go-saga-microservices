@@ -2,15 +2,12 @@ package consumer
 
 import (
 	"context"
-	"encoding/json"
 	"io"
-	"log"
 	"log/slog"
 
 	"errors"
 
 	"github.com/axmz/go-saga-microservices/inventory-service/internal/handler"
-	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -36,16 +33,14 @@ func (c *Consumer) Start(ctx context.Context) error {
 			slog.Warn("Kafka read error:", "err", err)
 			continue
 		}
-		var event *events.OrderCreatedEvent
-		if err := json.Unmarshal(message.Value, event); err != nil {
-			log.Printf("Error unmarshaling event: %v", err)
-			continue
-		}
-		switch event.Type {
-		case "orderCreatedEvent":
-			c.Handler.HandleOrderCreatedEvent(ctx, event)
-		case "paymentFailedEvent":
-			c.Handler.HandlePaymentFailedEvent(ctx, event)
+
+		switch message.Topic {
+		case "order.events":
+			c.Handler.OrderEvents(ctx, message)
+		case "payment.events":
+			c.Handler.PaymentEvents(ctx, message)
+		default:
+			slog.Warn("Unhandled event")
 		}
 	}
 }

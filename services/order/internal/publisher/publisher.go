@@ -2,11 +2,11 @@ package publisher
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
 )
 
 type Publisher struct {
@@ -24,11 +24,15 @@ func (p *Publisher) PublishOrderCreated(ctx context.Context, order *domain.Order
 			Id: item.ProductID,
 		}
 	}
-	event := events.OrderCreatedEvent{
-		Id:    order.ID,
-		Items: items,
+	event := events.OrderEventEnvelope{
+		Event: &events.OrderEventEnvelope_OrderCreated{
+			OrderCreated: &events.OrderCreatedEvent{
+				Id:    order.ID,
+				Items: items,
+			},
+		},
 	}
-	value, err := json.Marshal(&event)
+	value, err := proto.Marshal(&event)
 	if err != nil {
 		return err
 	}

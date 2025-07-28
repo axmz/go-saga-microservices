@@ -9,16 +9,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/segmentio/kafka-go"
 )
 
 type PaymentRequest struct {
 	OrderID string `json:"orderId"`
 	Fail    bool   `json:"fail"`
-}
-
-type PaymentEvent struct {
-	OrderID string `json:"orderId"`
 }
 
 var (
@@ -55,16 +52,25 @@ func paymentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("[PaymentService] Payment request for order: %s, fail: %v", orderId, fail)
-	event := PaymentEvent{OrderID: orderId}
 	var err error
 	if fail {
 		log.Printf("[PaymentService] Publishing paymentFailedEvent for order: %s", orderId)
-		err = emitEvent(kafkaWriterFail, event)
+		event := events.PaymentFailed{Id: orderId}
+		err = emitEvent(kafkaWriterFail, &events.PaymentEventEnvelope{
+			Event: &events.PaymentEventEnvelope_PaymentFailed{
+				PaymentFailed: &event,
+			},
+		})
 		redirectURL := fmt.Sprintf("/order?orderId=%s&error=Payment+Failed", orderId)
 		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 	} else {
 		log.Printf("[PaymentService] Publishing paymentSuccessEvent for order: %s", orderId)
-		err = emitEvent(kafkaWriterSuccess, event)
+		event := events.PaymentSucceeded{Id: orderId}
+		err = emitEvent(kafkaWriterSuccess, &events.PaymentEventEnvelope{
+			Event: &events.PaymentEventEnvelope_PaymentSucceeded{
+				PaymentSucceeded: &event,
+			},
+		})
 		redirectURL := fmt.Sprintf("/order?orderId=%s", orderId)
 		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 	}
@@ -73,7 +79,7 @@ func paymentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func emitEvent(writer *kafka.Writer, event PaymentEvent) error {
+func emitEvent(writer *kafka.Writer, event *events.PaymentEventEnvelope) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	value, _ := json.Marshal(event)

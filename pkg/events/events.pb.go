@@ -21,52 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type EventStatus int32
-
-const (
-	EventStatus_STATUS_SUCCESS EventStatus = 0
-	EventStatus_STATUS_FAILED  EventStatus = 1
-)
-
-// Enum value maps for EventStatus.
-var (
-	EventStatus_name = map[int32]string{
-		0: "STATUS_SUCCESS",
-		1: "STATUS_FAILED",
-	}
-	EventStatus_value = map[string]int32{
-		"STATUS_SUCCESS": 0,
-		"STATUS_FAILED":  1,
-	}
-)
-
-func (x EventStatus) Enum() *EventStatus {
-	p := new(EventStatus)
-	*p = x
-	return p
-}
-
-func (x EventStatus) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (EventStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_events_proto_enumTypes[0].Descriptor()
-}
-
-func (EventStatus) Type() protoreflect.EnumType {
-	return &file_events_proto_enumTypes[0]
-}
-
-func (x EventStatus) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use EventStatus.Descriptor instead.
-func (EventStatus) EnumDescriptor() ([]byte, []int) {
-	return file_events_proto_rawDescGZIP(), []int{0}
-}
-
 type Item struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -111,18 +65,83 @@ func (x *Item) GetId() string {
 	return ""
 }
 
+type OrderEventEnvelope struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Event:
+	//
+	//	*OrderEventEnvelope_OrderCreated
+	Event         isOrderEventEnvelope_Event `protobuf_oneof:"event"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrderEventEnvelope) Reset() {
+	*x = OrderEventEnvelope{}
+	mi := &file_events_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrderEventEnvelope) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrderEventEnvelope) ProtoMessage() {}
+
+func (x *OrderEventEnvelope) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrderEventEnvelope.ProtoReflect.Descriptor instead.
+func (*OrderEventEnvelope) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *OrderEventEnvelope) GetEvent() isOrderEventEnvelope_Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+func (x *OrderEventEnvelope) GetOrderCreated() *OrderCreatedEvent {
+	if x != nil {
+		if x, ok := x.Event.(*OrderEventEnvelope_OrderCreated); ok {
+			return x.OrderCreated
+		}
+	}
+	return nil
+}
+
+type isOrderEventEnvelope_Event interface {
+	isOrderEventEnvelope_Event()
+}
+
+type OrderEventEnvelope_OrderCreated struct {
+	OrderCreated *OrderCreatedEvent `protobuf:"bytes,1,opt,name=order_created,json=orderCreated,proto3,oneof"`
+}
+
+func (*OrderEventEnvelope_OrderCreated) isOrderEventEnvelope_Event() {}
+
 type OrderCreatedEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Items         []*Item                `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
-	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"` // optional: for event type switching
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *OrderCreatedEvent) Reset() {
 	*x = OrderCreatedEvent{}
-	mi := &file_events_proto_msgTypes[1]
+	mi := &file_events_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -134,7 +153,7 @@ func (x *OrderCreatedEvent) String() string {
 func (*OrderCreatedEvent) ProtoMessage() {}
 
 func (x *OrderCreatedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_proto_msgTypes[1]
+	mi := &file_events_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -147,7 +166,7 @@ func (x *OrderCreatedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderCreatedEvent.ProtoReflect.Descriptor instead.
 func (*OrderCreatedEvent) Descriptor() ([]byte, []int) {
-	return file_events_proto_rawDescGZIP(), []int{1}
+	return file_events_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *OrderCreatedEvent) GetId() string {
@@ -164,36 +183,32 @@ func (x *OrderCreatedEvent) GetItems() []*Item {
 	return nil
 }
 
-func (x *OrderCreatedEvent) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-
-type ReserveProductsEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Status        EventStatus            `protobuf:"varint,2,opt,name=status,proto3,enum=events.EventStatus" json:"status,omitempty"`
+type InventoryEventEnvelope struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Event:
+	//
+	//	*InventoryEventEnvelope_ReservationSucceeded
+	//	*InventoryEventEnvelope_ReservationFailed
+	Event         isInventoryEventEnvelope_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ReserveProductsEvent) Reset() {
-	*x = ReserveProductsEvent{}
-	mi := &file_events_proto_msgTypes[2]
+func (x *InventoryEventEnvelope) Reset() {
+	*x = InventoryEventEnvelope{}
+	mi := &file_events_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ReserveProductsEvent) String() string {
+func (x *InventoryEventEnvelope) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ReserveProductsEvent) ProtoMessage() {}
+func (*InventoryEventEnvelope) ProtoMessage() {}
 
-func (x *ReserveProductsEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_events_proto_msgTypes[2]
+func (x *InventoryEventEnvelope) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -204,23 +219,308 @@ func (x *ReserveProductsEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ReserveProductsEvent.ProtoReflect.Descriptor instead.
-func (*ReserveProductsEvent) Descriptor() ([]byte, []int) {
-	return file_events_proto_rawDescGZIP(), []int{2}
+// Deprecated: Use InventoryEventEnvelope.ProtoReflect.Descriptor instead.
+func (*InventoryEventEnvelope) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ReserveProductsEvent) GetId() string {
+func (x *InventoryEventEnvelope) GetEvent() isInventoryEventEnvelope_Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+func (x *InventoryEventEnvelope) GetReservationSucceeded() *InventoryReservationSucceeded {
+	if x != nil {
+		if x, ok := x.Event.(*InventoryEventEnvelope_ReservationSucceeded); ok {
+			return x.ReservationSucceeded
+		}
+	}
+	return nil
+}
+
+func (x *InventoryEventEnvelope) GetReservationFailed() *InventoryReservationFailed {
+	if x != nil {
+		if x, ok := x.Event.(*InventoryEventEnvelope_ReservationFailed); ok {
+			return x.ReservationFailed
+		}
+	}
+	return nil
+}
+
+type isInventoryEventEnvelope_Event interface {
+	isInventoryEventEnvelope_Event()
+}
+
+type InventoryEventEnvelope_ReservationSucceeded struct {
+	ReservationSucceeded *InventoryReservationSucceeded `protobuf:"bytes,1,opt,name=reservation_succeeded,json=reservationSucceeded,proto3,oneof"`
+}
+
+type InventoryEventEnvelope_ReservationFailed struct {
+	ReservationFailed *InventoryReservationFailed `protobuf:"bytes,2,opt,name=reservation_failed,json=reservationFailed,proto3,oneof"`
+}
+
+func (*InventoryEventEnvelope_ReservationSucceeded) isInventoryEventEnvelope_Event() {}
+
+func (*InventoryEventEnvelope_ReservationFailed) isInventoryEventEnvelope_Event() {}
+
+type InventoryReservationSucceeded struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InventoryReservationSucceeded) Reset() {
+	*x = InventoryReservationSucceeded{}
+	mi := &file_events_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InventoryReservationSucceeded) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InventoryReservationSucceeded) ProtoMessage() {}
+
+func (x *InventoryReservationSucceeded) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InventoryReservationSucceeded.ProtoReflect.Descriptor instead.
+func (*InventoryReservationSucceeded) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *InventoryReservationSucceeded) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *ReserveProductsEvent) GetStatus() EventStatus {
+type InventoryReservationFailed struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InventoryReservationFailed) Reset() {
+	*x = InventoryReservationFailed{}
+	mi := &file_events_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InventoryReservationFailed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InventoryReservationFailed) ProtoMessage() {}
+
+func (x *InventoryReservationFailed) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[5]
 	if x != nil {
-		return x.Status
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
 	}
-	return EventStatus_STATUS_SUCCESS
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InventoryReservationFailed.ProtoReflect.Descriptor instead.
+func (*InventoryReservationFailed) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InventoryReservationFailed) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type PaymentEventEnvelope struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Event:
+	//
+	//	*PaymentEventEnvelope_PaymentSucceeded
+	//	*PaymentEventEnvelope_PaymentFailed
+	Event         isPaymentEventEnvelope_Event `protobuf_oneof:"event"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PaymentEventEnvelope) Reset() {
+	*x = PaymentEventEnvelope{}
+	mi := &file_events_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaymentEventEnvelope) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentEventEnvelope) ProtoMessage() {}
+
+func (x *PaymentEventEnvelope) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentEventEnvelope.ProtoReflect.Descriptor instead.
+func (*PaymentEventEnvelope) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *PaymentEventEnvelope) GetEvent() isPaymentEventEnvelope_Event {
+	if x != nil {
+		return x.Event
+	}
+	return nil
+}
+
+func (x *PaymentEventEnvelope) GetPaymentSucceeded() *PaymentSucceeded {
+	if x != nil {
+		if x, ok := x.Event.(*PaymentEventEnvelope_PaymentSucceeded); ok {
+			return x.PaymentSucceeded
+		}
+	}
+	return nil
+}
+
+func (x *PaymentEventEnvelope) GetPaymentFailed() *PaymentFailed {
+	if x != nil {
+		if x, ok := x.Event.(*PaymentEventEnvelope_PaymentFailed); ok {
+			return x.PaymentFailed
+		}
+	}
+	return nil
+}
+
+type isPaymentEventEnvelope_Event interface {
+	isPaymentEventEnvelope_Event()
+}
+
+type PaymentEventEnvelope_PaymentSucceeded struct {
+	PaymentSucceeded *PaymentSucceeded `protobuf:"bytes,1,opt,name=payment_succeeded,json=paymentSucceeded,proto3,oneof"`
+}
+
+type PaymentEventEnvelope_PaymentFailed struct {
+	PaymentFailed *PaymentFailed `protobuf:"bytes,2,opt,name=payment_failed,json=paymentFailed,proto3,oneof"`
+}
+
+func (*PaymentEventEnvelope_PaymentSucceeded) isPaymentEventEnvelope_Event() {}
+
+func (*PaymentEventEnvelope_PaymentFailed) isPaymentEventEnvelope_Event() {}
+
+type PaymentSucceeded struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PaymentSucceeded) Reset() {
+	*x = PaymentSucceeded{}
+	mi := &file_events_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaymentSucceeded) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentSucceeded) ProtoMessage() {}
+
+func (x *PaymentSucceeded) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentSucceeded.ProtoReflect.Descriptor instead.
+func (*PaymentSucceeded) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *PaymentSucceeded) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type PaymentFailed struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PaymentFailed) Reset() {
+	*x = PaymentFailed{}
+	mi := &file_events_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PaymentFailed) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentFailed) ProtoMessage() {}
+
+func (x *PaymentFailed) ProtoReflect() protoreflect.Message {
+	mi := &file_events_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentFailed.ProtoReflect.Descriptor instead.
+func (*PaymentFailed) Descriptor() ([]byte, []int) {
+	return file_events_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PaymentFailed) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
 }
 
 var File_events_proto protoreflect.FileDescriptor
@@ -229,17 +529,29 @@ const file_events_proto_rawDesc = "" +
 	"\n" +
 	"\fevents.proto\x12\x06events\"\x16\n" +
 	"\x04Item\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"[\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"_\n" +
+	"\x12OrderEventEnvelope\x12@\n" +
+	"\rorder_created\x18\x01 \x01(\v2\x19.events.OrderCreatedEventH\x00R\forderCreatedB\a\n" +
+	"\x05event\"G\n" +
 	"\x11OrderCreatedEvent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
-	"\x05items\x18\x02 \x03(\v2\f.events.ItemR\x05items\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\"S\n" +
-	"\x14ReserveProductsEvent\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12+\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x13.events.EventStatusR\x06status*4\n" +
-	"\vEventStatus\x12\x12\n" +
-	"\x0eSTATUS_SUCCESS\x10\x00\x12\x11\n" +
-	"\rSTATUS_FAILED\x10\x01B\x8a\x01\n" +
+	"\x05items\x18\x02 \x03(\v2\f.events.ItemR\x05items\"\xd4\x01\n" +
+	"\x16InventoryEventEnvelope\x12\\\n" +
+	"\x15reservation_succeeded\x18\x01 \x01(\v2%.events.InventoryReservationSucceededH\x00R\x14reservationSucceeded\x12S\n" +
+	"\x12reservation_failed\x18\x02 \x01(\v2\".events.InventoryReservationFailedH\x00R\x11reservationFailedB\a\n" +
+	"\x05event\"/\n" +
+	"\x1dInventoryReservationSucceeded\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\",\n" +
+	"\x1aInventoryReservationFailed\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xa8\x01\n" +
+	"\x14PaymentEventEnvelope\x12G\n" +
+	"\x11payment_succeeded\x18\x01 \x01(\v2\x18.events.PaymentSucceededH\x00R\x10paymentSucceeded\x12>\n" +
+	"\x0epayment_failed\x18\x02 \x01(\v2\x15.events.PaymentFailedH\x00R\rpaymentFailedB\a\n" +
+	"\x05event\"\"\n" +
+	"\x10PaymentSucceeded\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x1f\n" +
+	"\rPaymentFailed\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02idB\x8a\x01\n" +
 	"\n" +
 	"com.eventsB\vEventsProtoP\x01Z7github.com/axmz/go-saga-microservices/pkg/events;events\xa2\x02\x03EXX\xaa\x02\x06Events\xca\x02\x06Events\xe2\x02\x12Events\\GPBMetadata\xea\x02\x06Eventsb\x06proto3"
 
@@ -255,22 +567,30 @@ func file_events_proto_rawDescGZIP() []byte {
 	return file_events_proto_rawDescData
 }
 
-var file_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_events_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_events_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_events_proto_goTypes = []any{
-	(EventStatus)(0),             // 0: events.EventStatus
-	(*Item)(nil),                 // 1: events.Item
-	(*OrderCreatedEvent)(nil),    // 2: events.OrderCreatedEvent
-	(*ReserveProductsEvent)(nil), // 3: events.ReserveProductsEvent
+	(*Item)(nil),                          // 0: events.Item
+	(*OrderEventEnvelope)(nil),            // 1: events.OrderEventEnvelope
+	(*OrderCreatedEvent)(nil),             // 2: events.OrderCreatedEvent
+	(*InventoryEventEnvelope)(nil),        // 3: events.InventoryEventEnvelope
+	(*InventoryReservationSucceeded)(nil), // 4: events.InventoryReservationSucceeded
+	(*InventoryReservationFailed)(nil),    // 5: events.InventoryReservationFailed
+	(*PaymentEventEnvelope)(nil),          // 6: events.PaymentEventEnvelope
+	(*PaymentSucceeded)(nil),              // 7: events.PaymentSucceeded
+	(*PaymentFailed)(nil),                 // 8: events.PaymentFailed
 }
 var file_events_proto_depIdxs = []int32{
-	1, // 0: events.OrderCreatedEvent.items:type_name -> events.Item
-	0, // 1: events.ReserveProductsEvent.status:type_name -> events.EventStatus
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2, // 0: events.OrderEventEnvelope.order_created:type_name -> events.OrderCreatedEvent
+	0, // 1: events.OrderCreatedEvent.items:type_name -> events.Item
+	4, // 2: events.InventoryEventEnvelope.reservation_succeeded:type_name -> events.InventoryReservationSucceeded
+	5, // 3: events.InventoryEventEnvelope.reservation_failed:type_name -> events.InventoryReservationFailed
+	7, // 4: events.PaymentEventEnvelope.payment_succeeded:type_name -> events.PaymentSucceeded
+	8, // 5: events.PaymentEventEnvelope.payment_failed:type_name -> events.PaymentFailed
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_events_proto_init() }
@@ -278,19 +598,29 @@ func file_events_proto_init() {
 	if File_events_proto != nil {
 		return
 	}
+	file_events_proto_msgTypes[1].OneofWrappers = []any{
+		(*OrderEventEnvelope_OrderCreated)(nil),
+	}
+	file_events_proto_msgTypes[3].OneofWrappers = []any{
+		(*InventoryEventEnvelope_ReservationSucceeded)(nil),
+		(*InventoryEventEnvelope_ReservationFailed)(nil),
+	}
+	file_events_proto_msgTypes[6].OneofWrappers = []any{
+		(*PaymentEventEnvelope_PaymentSucceeded)(nil),
+		(*PaymentEventEnvelope_PaymentFailed)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_events_proto_rawDesc), len(file_events_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   3,
+			NumEnums:      0,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_events_proto_goTypes,
 		DependencyIndexes: file_events_proto_depIdxs,
-		EnumInfos:         file_events_proto_enumTypes,
 		MessageInfos:      file_events_proto_msgTypes,
 	}.Build()
 	File_events_proto = out.File
