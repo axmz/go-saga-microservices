@@ -8,10 +8,12 @@ import (
 	"github.com/axmz/go-saga-microservices/lib/adapter/http"
 	"github.com/axmz/go-saga-microservices/lib/adapter/kafka"
 	"github.com/axmz/go-saga-microservices/services/order/internal/consumer"
+	"github.com/axmz/go-saga-microservices/services/order/internal/handler"
 	"github.com/axmz/go-saga-microservices/services/order/internal/publisher"
 	"github.com/axmz/go-saga-microservices/services/order/internal/repository"
 	"github.com/axmz/go-saga-microservices/services/order/internal/router"
 	"github.com/axmz/go-saga-microservices/services/order/internal/service"
+	"github.com/axmz/go-saga-microservices/services/order/internal/sync"
 )
 
 type App struct {
@@ -35,9 +37,11 @@ func SetupApp(
 ) (*App, error) {
 	rep := repository.New(db)
 	pub := publisher.New(kfk.Writer)
-	svc := service.New(rep, pub)
-	con := consumer.New(kfk.Reader, svc)
-	mux := router.New(svc)
+	syn := sync.New()
+	svc := service.New(rep, pub, syn)
+	han := handler.New(svc)
+	con := consumer.New(kfk.Reader, han)
+	mux := router.New(svc, han)
 	srv.Router.Handler = mux
 
 	app := &App{

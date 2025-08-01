@@ -23,7 +23,7 @@ func New(cfg *config.Config) *Service {
 
 func (s *Service) GetOrder(ctx context.Context, orderID string) (*domain.Order, error) {
 	OrderServiceURL := s.cfg.Order.HTTP.URL()
-	resp, err := http.Get(OrderServiceURL + "/orders?orderId=" + orderID)
+	resp, err := http.Get(OrderServiceURL + "/orders/" + orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,23 +59,27 @@ func (s *Service) GetAllProducts(ctx context.Context) ([]domain.Product, error) 
 	return products, nil
 }
 
-func (s *Service) CreateOrder(ctx context.Context, orderReq domain.CreateOrderRequest) error {
+func (s *Service) CreateOrder(ctx context.Context, orderReq domain.CreateOrderRequest) (*domain.Order, error) {
 	jsonData, err := json.Marshal(orderReq)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Send to order service
 	OrderServiceURL := s.cfg.Order.HTTP.URL()
 	resp, err := http.Post(OrderServiceURL+"/orders", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("order service returned status: %d", resp.StatusCode)
+		return nil, fmt.Errorf("order service returned status: %d", resp.StatusCode)
 	}
 
-	return nil
+	var order domain.Order
+	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
+		return nil, err
+	}
+
+	return &order, nil
 }

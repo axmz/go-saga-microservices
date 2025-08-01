@@ -8,6 +8,6 @@ start multiple
 formalize http responses
 improve log, add service name
 fix DB.Conn()
-protobuf
+protobuf to all req res
 use interfaces
 review makefile

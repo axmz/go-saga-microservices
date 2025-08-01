@@ -38,6 +38,8 @@ func (s *Service) ReleaseItems(ctx context.Context) {
 	// return s.Repo.ReleaseItems(orderID, productID)
 }
 
-func (s *Service) ReleaseReservedItems(ctx context.Context, orderID string) error {
-	return s.Repo.ReleaseReservedItems(ctx, orderID)
+func (s *Service) ReleaseReservedItems(ctx context.Context, orderID string) {
+	if err := s.Repo.ReleaseReservedItems(ctx, orderID); err != nil {
+
+	}
 }

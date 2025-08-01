@@ -58,18 +58,18 @@ func (h *InventoryHandler) PaymentEvents(ctx context.Context, message kafka.Mess
 
 	err := proto.Unmarshal(data, &envelope)
 	if err != nil {
-		log.Printf("failed to unmarshal InventoryEventEnvelope: %v", err)
+		log.Printf("failed to unmarshal PaymentEventEnvelope: %v", err)
 		return
 	}
 
 	switch evt := envelope.Event.(type) {
 	case *events.PaymentEventEnvelope_PaymentFailed:
 		orderID := evt.PaymentFailed.Id
-		log.Printf("InventoryReservationSucceeded: order id = %s", orderID)
+		log.Printf("Payment Failed: order id = %s", orderID)
 		h.Service.ReleaseReservedItems(ctx, orderID)
 
 	case *events.PaymentEventEnvelope_PaymentSucceeded:
-		log.Printf("InventoryReservationSucceeded: order id = %s", evt.PaymentSucceeded.Id)
+		log.Printf("Payment Succeeded: order id = %s", evt.PaymentSucceeded.Id)
 
 	default:
 		log.Printf("Unknown or missing event type in envelope")

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
@@ -35,26 +37,24 @@ func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
 }
 
 func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, error) {
-	row := r.DB.Conn().QueryRowContext(ctx, `SELECT id, status, created_at, updated_at FROM orders WHERE id = $1`, id)
+	row := r.DB.Conn().QueryRowContext(ctx, `
+		SELECT id, status, item_ids, created_at, updated_at
+		FROM orders
+		WHERE id = $1
+	`, id)
+
 	var o domain.Order
-	err := row.Scan(&o.ID, &o.Status, &o.CreatedAt, &o.UpdatedAt)
+	var itemIDs string
+	err := row.Scan(&o.ID, &o.Status, &itemIDs, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, domain.NewErrOrderNotFound(id)
 		}
-		return nil, err
+		return nil, fmt.Errorf("query order by id %s: %w", id, err)
 	}
-	rows, err := r.DB.Conn().QueryContext(ctx, `SELECT product_id FROM order_items WHERE order_id = $1`, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var item domain.Item
-		if err := rows.Scan(&item.ProductID); err != nil {
-			return nil, err
-		}
-		o.Items = append(o.Items, item)
+	o.Items = make([]domain.Item, 0)
+	for _, itemID := range strings.Split(itemIDs, ",") {
+		o.Items = append(o.Items, domain.Item{ProductID: itemID})
 	}
 	return &o, nil
 }

@@ -15,13 +15,11 @@ type OrderItem struct {
 }
 
 type Order struct {
-	ID          string      `json:"id"`
-	CustomerID  string      `json:"customer_id"`
-	Items       []OrderItem `json:"items"`
-	TotalAmount float64     `json:"total_amount"`
-	Status      string      `json:"status"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
+	ID        string      `json:"id"`
+	Status    string      `json:"status"`
+	Items     []OrderItem `json:"items"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 type PaymentInfo struct {

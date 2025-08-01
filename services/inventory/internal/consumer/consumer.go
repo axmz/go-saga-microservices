@@ -16,8 +16,8 @@ type Consumer struct {
 	Handler *handler.InventoryHandler
 }
 
-func New(reader *kafka.Reader, handler *handler.InventoryHandler) *Consumer {
-	return &Consumer{Reader: reader, Handler: handler}
+func New(r *kafka.Reader, h *handler.InventoryHandler) *Consumer {
+	return &Consumer{Reader: r, Handler: h}
 }
 
 func (c *Consumer) Start(ctx context.Context) error {

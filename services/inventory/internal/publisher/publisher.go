@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"log/slog"
 
 	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
 )
 
 type Publisher struct {
@@ -20,18 +22,24 @@ func New(writer *kafka.Writer) *Publisher {
 func (k *Publisher) PublishInventoryReservationSucceededEvent(orderID string) {
 	log.Printf("[InventoryService] Publishing inventory reservation event for order: %s, status: %s", orderID, "success")
 
-	event := &events.InventoryReservationSucceeded{
-		Id: orderID,
+	event := &events.InventoryEventEnvelope{
+		Event: &events.InventoryEventEnvelope_ReservationSucceeded{
+			ReservationSucceeded: &events.InventoryReservationSucceeded{
+				Id: orderID,
+			},
+		},
 	}
-	eventJSON, err := json.Marshal(event)
+
+	value, err := proto.Marshal(event)
 	if err != nil {
-		log.Printf("Error marshaling inventory reservation event: %v", err)
-		return
+		slog.Warn("Failed to marshal InventoryReservationSucceeded event: ", "err", err)
 	}
+
 	err = k.Writer.WriteMessages(context.Background(), kafka.Message{
 		Key:   []byte(orderID),
-		Value: eventJSON,
+		Value: value,
 	})
+
 	if err != nil {
 		log.Printf("Error publishing inventory reservation event: %v", err)
 	}

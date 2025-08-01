@@ -2,11 +2,12 @@ package repository
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/axmz/go-saga-microservices/inventory-service/internal/domain"
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
 	"github.com/axmz/go-saga-microservices/pkg/events"
+	"github.com/lib/pq"
 )
 
 type Repository struct {
@@ -46,44 +47,20 @@ func (r *Repository) ReserveItems(ctx context.Context, items []*events.Item) err
 		skus[i] = item.GetId()
 	}
 
-	tx, err := r.DB.Conn().BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
+	const reserveQ = `
+		UPDATE products
+		SET    status = 'reserved'
+		WHERE  sku = ANY($1) AND status = 'available'
+	`
 
-	// Check all items are available
-	checkQuery := `SELECT sku FROM products WHERE sku = ANY($1) AND status != 'available' FOR UPDATE`
-	rows, err := tx.QueryContext(ctx, checkQuery, skus)
+	res, err := r.DB.Conn().ExecContext(ctx, reserveQ, pq.Array(skus))
 	if err != nil {
 		return err
-	}
-	defer rows.Close()
-	var notAvailable []string
-	for rows.Next() {
-		var sku string
-		if err := rows.Scan(&sku); err != nil {
-			return err
-		}
-		notAvailable = append(notAvailable, sku)
-	}
-	if len(notAvailable) > 0 {
-		return errors.New("some items were not available (OOS)")
 	}
 
-	// All available, reserve them
-	reserveQuery := `UPDATE products
-		SET status = 'reserved', updated_at = CURRENT_TIMESTAMP
-		WHERE sku = ANY($1) AND status = 'available'`
-	_, err = tx.ExecContext(ctx, reserveQuery, skus)
-	if err != nil {
-		return err
+	rows, _ := res.RowsAffected()
+	if rows != int64(len(skus)) {
+		return fmt.Errorf("one or more SKUs were not available; reserved %d of %d", rows, len(skus))
 	}
 
 	return nil

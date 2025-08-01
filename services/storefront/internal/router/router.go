@@ -13,9 +13,9 @@ func New(svc *service.Service, renderer *renderer.TemplateRenderer) *http.ServeM
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	mux.HandleFunc("/", handlers.HomeHandler)
-	mux.HandleFunc("/payment", handlers.PaymentHandler)
-	mux.HandleFunc("/confirmation", handlers.ConfirmationHandler)
-	mux.HandleFunc("/order", handlers.OrderHandler)
+	mux.HandleFunc("/payment/{orderId}", handlers.PaymentHandler)
+	mux.HandleFunc("GET /confirmation", handlers.ConfirmationHandler)
+	mux.HandleFunc("GET /order/{orderId}", handlers.OrderHandler)
 	mux.HandleFunc("GET /api/products", handlers.APIProductsHandler)
 	mux.HandleFunc("POST /api/orders", handlers.APICreateOrderHandler)
 	return mux

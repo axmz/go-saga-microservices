@@ -91,7 +91,7 @@ func (h *Handler) ConfirmationHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) OrderHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.URL.Query().Get("orderId")
+	orderID := r.PathValue("orderId")
 	if orderID == "" {
 		http.Error(w, "Missing orderId", http.StatusBadRequest)
 		return
@@ -101,9 +101,8 @@ func (h *Handler) OrderHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := map[string]interface{}{
+	data := map[string]*domain.Order{
 		"Order": order,
-		"Title": "Order Status",
 	}
 	err = h.Renderer.Render(w, "order.html", data)
 	if err != nil {
@@ -129,12 +128,14 @@ func (h *Handler) APICreateOrderHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.Service.CreateOrder(r.Context(), req); err != nil {
+	order, err := h.Service.CreateOrder(r.Context(), req)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(&order)
 }
 
 // WS /orders/ws?orderId=...

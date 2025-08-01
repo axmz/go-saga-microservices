@@ -3,13 +3,18 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"log"
 
+	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/axmz/go-saga-microservices/services/order/internal/service"
+	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
 )
 
 type OrderHandler struct {
@@ -27,45 +32,44 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Items []domain.Item `json:"items"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	if len(req.Items) == 0 {
 		http.Error(w, "No items provided", http.StatusBadRequest)
 		return
 	}
-	ord := domain.NewOrder(req.Items)
-	if err := h.Service.CreateOrder(r.Context(), ord); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	log.Printf("[OrderService] Created order: %s, status: %s", ord.ID, ord.Status)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(ord)
-}
 
-// GET /orders?orderId=...
-func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	orderID := r.URL.Query().Get("orderId")
-	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	ord, err := h.Service.GetOrder(ctx, orderID)
+	order, err := h.Service.CreateOrder(r.Context(), req.Items)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if ord == nil {
-		http.Error(w, "Order not found", http.StatusNotFound)
+
+	// TODO: DRY
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(&order)
+}
+
+// GET /orders/orderID...
+func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue("orderID")
+	if orderID == "" {
+		http.Error(w, "Missing orderID", http.StatusBadRequest)
+		return
+	}
+	ord, err := h.Service.GetOrder(r.Context(), orderID)
+	if err != nil {
+		if errors.Is(err, domain.ErrOrderNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			log.Printf("failed to get order: %v", err)
+		}
 		return
 	}
 	if ord != nil {
@@ -114,11 +118,45 @@ func (h *OrderHandler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
 			bufrw.Flush()
 			return
 		}
-		bufrw.WriteString("status: " + ord.Status + "\n")
+		bufrw.WriteString("status: " + string(ord.Status) + "\n")
 		bufrw.Flush()
 		if ord.Status == domain.StatusPaid || ord.Status == domain.StatusFailed {
 			return
 		}
 		time.Sleep(2 * time.Second)
+	}
+}
+
+func (h *OrderHandler) InventoryEvents(ctx context.Context, m kafka.Message) {
+	var envelope events.InventoryEventEnvelope
+	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
+		slog.Warn("failed to unmarshal InventoryEventEnvelope: ", "err", err)
+		return
+	}
+
+	switch evt := envelope.Event.(type) {
+	case *events.InventoryEventEnvelope_ReservationSucceeded:
+		h.Service.UpdateOrderAwaitingPayment(ctx, evt.ReservationSucceeded.Id)
+	case *events.InventoryEventEnvelope_ReservationFailed:
+		h.Service.UpdateOrderFailed(ctx, evt.ReservationFailed.Id)
+	default:
+		slog.Warn("Unknown or missing event type in envelope")
+	}
+}
+
+func (h *OrderHandler) PaymentEvents(ctx context.Context, m kafka.Message) {
+	var envelope events.InventoryEventEnvelope
+	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
+		slog.Warn("Failed to unmarshal InventoryEventEnvelope:", "err", err)
+		return
+	}
+
+	switch evt := envelope.Event.(type) {
+	case *events.InventoryEventEnvelope_ReservationSucceeded:
+		h.Service.UpdateOrderAwaitingPayment(ctx, evt.ReservationSucceeded.Id)
+	case *events.InventoryEventEnvelope_ReservationFailed:
+		h.Service.UpdateOrderFailed(ctx, evt.ReservationFailed.Id)
+	default:
+		slog.Warn("Unknown or missing event type in envelope")
 	}
 }

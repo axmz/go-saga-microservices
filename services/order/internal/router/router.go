@@ -7,11 +7,10 @@ import (
 	"github.com/axmz/go-saga-microservices/services/order/internal/service"
 )
 
-func New(svc *service.Service) *http.ServeMux {
-	handlers := handler.New(svc)
+func New(svc *service.Service, h *handler.OrderHandler) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /orders", handlers.CreateOrder)
-	mux.HandleFunc("GET /orders", handlers.GetOrder)
-	mux.HandleFunc("GET /orders/ws", handlers.OrderStatusWS)
+	mux.HandleFunc("POST /orders", h.CreateOrder)
+	mux.HandleFunc("GET /orders/{orderID}", h.GetOrder)
+	mux.HandleFunc("GET /orders/ws", h.OrderStatusWS)
 	return mux
 }

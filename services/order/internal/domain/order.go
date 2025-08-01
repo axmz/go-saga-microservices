@@ -1,22 +1,44 @@
 package domain
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+type Status string
+
 const (
-	StatusPending         = "Pending"
-	StatusAwaitingPayment = "AwaitingPayment"
-	StatusPaid            = "Paid"
-	StatusFailed          = "Failed"
+	StatusPending         Status = "Pending"
+	StatusAwaitingPayment Status = "AwaitingPayment"
+	StatusPaid            Status = "Paid"
+	StatusFailed          Status = "Failed"
 )
+
+var ErrOrderNotFound = errors.New("order not found")
+
+type ErrOrderNotFoundWithID struct {
+	OrderID string
+}
+
+func (e *ErrOrderNotFoundWithID) Error() string {
+	return fmt.Sprintf("order not found: %s", e.OrderID)
+}
+
+func (e *ErrOrderNotFoundWithID) Unwrap() error {
+	return ErrOrderNotFound
+}
+
+func NewErrOrderNotFound(id string) error {
+	return &ErrOrderNotFoundWithID{OrderID: id}
+}
 
 type Order struct {
 	ID        string    `json:"id"`
 	Items     []Item    `json:"items"`
-	Status    string    `json:"status"`
+	Status    Status    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
