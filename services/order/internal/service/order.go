@@ -62,6 +62,7 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, status domain
 	o.Status = domain.StatusAwaitingPayment
 
 	err := s.Repo.UpdateOrder(ctx, o)
+	slog.Info("Updating order status:", "orderID", orderID, "status", status)
 	if err != nil {
 		return err
 	}
@@ -70,6 +71,7 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, status domain
 
 func (s *Service) UpdateOrderAwaitingPayment(ctx context.Context, orderID string) {
 	err := s.UpdateOrder(ctx, orderID, domain.StatusAwaitingPayment)
+	s.Sync.Pull(orderID) <- sync.OK
 	if err != nil {
 		// TODO: handle errors better, ex:
 		// - cron to deal with PENDINGs for long time

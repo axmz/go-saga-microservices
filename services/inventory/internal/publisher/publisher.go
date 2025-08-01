@@ -20,7 +20,7 @@ func New(writer *kafka.Writer) *Publisher {
 }
 
 func (k *Publisher) PublishInventoryReservationSucceededEvent(orderID string) {
-	log.Printf("[InventoryService] Publishing inventory reservation event for order: %s, status: %s", orderID, "success")
+	log.Printf("[InventoryService] Publishing inventory reservation success event for order: %s, status: %s", orderID, "success")
 
 	event := &events.InventoryEventEnvelope{
 		Event: &events.InventoryEventEnvelope_ReservationSucceeded{
@@ -41,12 +41,12 @@ func (k *Publisher) PublishInventoryReservationSucceededEvent(orderID string) {
 	})
 
 	if err != nil {
-		log.Printf("Error publishing inventory reservation event: %v", err)
+		log.Printf("Error publishing inventory reservation success event: %v", err)
 	}
 }
 
 func (k *Publisher) PublishInventoryReservationFailedEvent(orderID string) {
-	log.Printf("[InventoryService] Publishing inventory reservation event for order: %s, status: %s", orderID, "failed")
+	log.Printf("[InventoryService] Publishing inventory reservation failed event for order: %s, status: %s", orderID, "failed")
 
 	event := &events.InventoryReservationFailed{
 		Id: orderID,
@@ -61,6 +61,6 @@ func (k *Publisher) PublishInventoryReservationFailedEvent(orderID string) {
 		Value: eventJSON,
 	})
 	if err != nil {
-		log.Printf("Error publishing inventory reservation event: %v", err)
+		log.Printf("Error publishing inventory reservation failed event: %v", err)
 	}
 }
