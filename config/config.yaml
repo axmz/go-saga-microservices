@@ -30,6 +30,21 @@ common:
         - order.events
         - payment.events
       groupID: inventory-service-group
+  payment:
+    http:
+      protocol: http
+      host: localhost
+      port: "8083"
+      idleTimeout: 10s
+      readTimeout: 10s
+      writeTimeout: 10s
+    kafka:
+      addr: kafka:9092
+      producerTopic: payment.events
+      groupTopics:
+        - inventory.events 
+        - order.events
+      groupID: payment-service-group
   order:
     http:
       protocol: http

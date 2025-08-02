@@ -1,8 +1,11 @@
 module github.com/axmz/go-saga-microservices/payment-service
 
-go 1.21
+go 1.24.4
 
-require github.com/segmentio/kafka-go v0.4.42
+require (
+	github.com/lib/pq v1.10.9
+	github.com/segmentio/kafka-go v0.4.42
+)
 
 require (
 	github.com/klauspost/compress v1.15.9 // indirect

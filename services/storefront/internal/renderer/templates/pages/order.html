@@ -10,14 +10,12 @@
     {{ end }}
 </ul>
 {{ if eq .Order.Status "AwaitingPayment" }}
-<form method="POST" action="/payment" style="display:inline;">
-    <input type="hidden" name="orderId" value="{{ .Order.ID }}" />
-    <input type="hidden" name="fail" value="false" />
+<form method="POST" action="/api/payment-success" style="display:inline;">
+    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
     <button type="submit">Pay Success</button>
 </form>
-<form method="POST" action="/payment" style="display:inline; margin-left: 1em;">
-    <input type="hidden" name="orderId" value="{{ .Order.ID }}" />
-    <input type="hidden" name="fail" value="true" />
+<form method="POST" action="/api/payment-fail" style="display:inline; margin-left: 1em;">
+    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
     <button type="submit">Pay Fail</button>
 </form>
 {{ else if eq .Order.Status "Paid" }}

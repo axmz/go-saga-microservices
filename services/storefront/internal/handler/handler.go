@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -47,35 +46,6 @@ func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) PaymentHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		orderID := r.FormValue("orderId")
-		fail := r.FormValue("fail")
-		if orderID == "" {
-			http.Error(w, "Missing orderId", http.StatusBadRequest)
-			return
-		}
-		// Call payment-service
-		paymentURL := fmt.Sprintf("http://payment-service:8080/payment?orderId=%s&fail=%s", orderID, fail)
-		resp, err := http.Post(paymentURL, "application/json", nil)
-		if err != nil {
-			http.Error(w, "Payment service error: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer resp.Body.Close()
-		// Always redirect to order page after payment attempt
-		http.Redirect(w, r, "/order?orderId="+orderID, http.StatusSeeOther)
-		return
-	}
-	// Show payment page
-	err := h.Renderer.Render(w, "payment.html", map[string]interface{}{
-		"Title": "Payment",
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
 func (h *Handler) ConfirmationHandler(w http.ResponseWriter, r *http.Request) {
 	orderID := r.URL.Query().Get("order_id")
 
@@ -85,6 +55,26 @@ func (h *Handler) ConfirmationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.Renderer.Render(w, "confirmation.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) PaymentHandler(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue("orderId")
+	if orderID == "" {
+		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		return
+	}
+	order, err := h.Service.GetOrder(r.Context(), orderID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := map[string]*domain.Order{
+		"Order": order,
+	}
+	err = h.Renderer.Render(w, "payment.html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -184,4 +174,44 @@ func (h *Handler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
 		// }
 		time.Sleep(2 * time.Second)
 	}
+}
+
+func (h *Handler) APIPaymentSuccessHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	orderID := r.FormValue("order_id")
+	if orderID == "" {
+		http.Error(w, "Missing order_id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Service.PaymentSuccess(r.Context(), orderID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/payment/"+orderID, http.StatusSeeOther)
+}
+
+func (h *Handler) APIPaymentFailHandler(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	orderID := r.FormValue("order_id")
+	if orderID == "" {
+		http.Error(w, "Missing order_id", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.Service.PaymentFail(r.Context(), orderID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

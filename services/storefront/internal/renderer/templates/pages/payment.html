@@ -1,91 +1,41 @@
-{{define "content"}}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Information</h3>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="/payment" id="payment-form">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="name" class="form-label">Cardholder Name</label>
-                            <input type="text" class="form-control" id="name" name="name" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="card_number" class="form-label">Card Number</label>
-                            <input type="text" class="form-control" id="card_number" name="card_number"
-                                placeholder="1234 5678 9012 3456" maxlength="19" required>
-                        </div>
-                    </div>
+{{ define "content" }}
+<h1>Pay for your order</h1>
 
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="expiry_date" class="form-label">Expiry Date</label>
-                            <input type="text" class="form-control" id="expiry_date" name="expiry_date"
-                                placeholder="MM/YY" maxlength="5" required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="cvv" class="form-label">CVV</label>
-                            <input type="text" class="form-control" id="cvv" name="cvv" placeholder="123" maxlength="4"
-                                required>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-credit-card text-muted me-2"></i>
-                                <small class="text-muted">Secure payment processing</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                This is a demo payment form. No real payments will be processed.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary btn-lg w-100">
-                                <i class="fas fa-lock me-2"></i>Complete Payment
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
+{{ if .Order }}
+<p><strong>Order ID:</strong> <span id="order-id">{{ .Order.ID }}</span></p>
+<p><strong>Status:</strong> <span id="order-status">{{ .Order.Status }}</span></p>
+<ul>
+    {{ range .Order.Items }}
+    <li>Product ID: {{ .ProductID }}</li>
+    {{ end }}
+</ul>
+{{ if eq .Order.Status "AwaitingPayment" }}
+{{ else if eq .Order.Status "Paid" }}
+<p>Your order has been paid. Thank you!</p>
+{{ else if eq .Order.Status "Failed" }}
+<p>Your order has failed. Please try again or contact support.</p>
+{{ end }}
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Format card number with spaces
-        const cardNumber = document.getElementById('card_number');
-        cardNumber.addEventListener('input', function (e) {
-            let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-            e.target.value = formattedValue;
-        });
-
-        // Format expiry date
-        const expiryDate = document.getElementById('expiry_date');
-        expiryDate.addEventListener('input', function (e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+    (function () {
+        var orderId = document.getElementById('order-id').textContent;
+        var statusEl = document.getElementById('order-status');
+        var wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        var wsUrl = wsProto + '://' + window.location.hostname + ':8080/orders/ws?orderId=' + orderId;
+        var ws = new WebSocket(wsUrl);
+        ws.onmessage = function (event) {
+            try {
+                var data = JSON.parse(event.data);
+                if (data.status) {
+                    statusEl.textContent = data.status;
+                }
+            } catch (e) {
+                // fallback for plain text
+                statusEl.textContent = event.data;
             }
-            e.target.value = value;
-        });
-
-        // Format CVV
-        const cvv = document.getElementById('cvv');
-        cvv.addEventListener('input', function (e) {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
-    });
+        };
+    })();
 </script>
-{{end}}
+{{ else }}
+<p>Order not found.</p>
+{{ end }}
+{{ end }}

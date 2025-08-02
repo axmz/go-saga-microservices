@@ -52,6 +52,12 @@ type Config struct {
 		Kafka KafkaConfig      `yaml:"kafka"`
 	} `yaml:"inventory"`
 
+	Payment struct {
+		HTTP  HttpServerConfig `yaml:"http"`
+		DB    DBConfig         `yaml:"db"`
+		Kafka KafkaConfig      `yaml:"kafka"`
+	} `yaml:"payment"`
+
 	Order struct {
 		HTTP  HttpServerConfig `yaml:"http"`
 		DB    DBConfig         `yaml:"db"`

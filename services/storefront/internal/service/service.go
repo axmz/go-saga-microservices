@@ -83,3 +83,37 @@ func (s *Service) CreateOrder(ctx context.Context, orderReq domain.CreateOrderRe
 
 	return &order, nil
 }
+
+func (s *Service) PaymentSuccess(ctx context.Context, orderID string) error {
+	PaymentServiceURL := s.cfg.Payment.HTTP.URL()
+	jsonData, err := json.Marshal(map[string]string{"order_id": orderID})
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(PaymentServiceURL+"/payment-success", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("payment service returned status: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (s *Service) PaymentFail(ctx context.Context, orderID string) error {
+	PaymentServiceURL := s.cfg.Payment.HTTP.URL()
+	jsonData, err := json.Marshal(map[string]string{"order_id": orderID})
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(PaymentServiceURL+"/payment-fail/", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("payment service returned status: %d", resp.StatusCode)
+	}
+	return nil
+}

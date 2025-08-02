@@ -2,93 +2,75 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
+	"log/slog"
 	"os"
-	"time"
+	"sync"
 
-	"github.com/axmz/go-saga-microservices/pkg/events"
-	"github.com/segmentio/kafka-go"
-)
-
-type PaymentRequest struct {
-	OrderID string `json:"orderId"`
-	Fail    bool   `json:"fail"`
-}
-
-var (
-	kafkaWriterSuccess *kafka.Writer
-	kafkaWriterFail    *kafka.Writer
+	"github.com/axmz/go-saga-microservices/config"
+	"github.com/axmz/go-saga-microservices/lib/adapter/http"
+	"github.com/axmz/go-saga-microservices/lib/adapter/kafka"
+	"github.com/axmz/go-saga-microservices/lib/logger"
+	"github.com/axmz/go-saga-microservices/payment-service/internal/app"
+	"github.com/axmz/go-saga-microservices/pkg/graceful"
 )
 
 func main() {
-	kafkaBroker := getEnv("KAFKA_BROKER", "kafka:9092")
-	kafkaWriterSuccess = &kafka.Writer{
-		Addr:  kafka.TCP(kafkaBroker),
-		Topic: "payments.success",
-	}
-	kafkaWriterFail = &kafka.Writer{
-		Addr:  kafka.TCP(kafkaBroker),
-		Topic: "payments.failed",
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
 
-	http.HandleFunc("/payment", paymentHandler)
-	log.Println("Payment service running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
+	log.SetOutput(os.Stdout)
+	log.Println("Payment service starting")
 
-func paymentHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	orderId := r.URL.Query().Get("orderId")
-	fail := r.URL.Query().Get("fail") == "true"
-	if orderId == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
-		return
-	}
-
-	log.Printf("[PaymentService] Payment request for order: %s, fail: %v", orderId, fail)
-	var err error
-	if fail {
-		log.Printf("[PaymentService] Publishing paymentFailedEvent for order: %s", orderId)
-		event := events.PaymentFailed{Id: orderId}
-		err = emitEvent(kafkaWriterFail, &events.PaymentEventEnvelope{
-			Event: &events.PaymentEventEnvelope_PaymentFailed{
-				PaymentFailed: &event,
-			},
-		})
-		redirectURL := fmt.Sprintf("/order?orderId=%s&error=Payment+Failed", orderId)
-		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
-	} else {
-		log.Printf("[PaymentService] Publishing paymentSuccessEvent for order: %s", orderId)
-		event := events.PaymentSucceeded{Id: orderId}
-		err = emitEvent(kafkaWriterSuccess, &events.PaymentEventEnvelope{
-			Event: &events.PaymentEventEnvelope_PaymentSucceeded{
-				PaymentSucceeded: &event,
-			},
-		})
-		redirectURL := fmt.Sprintf("/order?orderId=%s", orderId)
-		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
-	}
+	// load config
+	cfg, err := config.Load()
 	if err != nil {
-		log.Printf("Failed to emit payment event: %v", err)
+		log.Fatalf("Failed to load config: %v", err)
 	}
-}
 
-func emitEvent(writer *kafka.Writer, event *events.PaymentEventEnvelope) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	value, _ := json.Marshal(event)
-	return writer.WriteMessages(ctx, kafka.Message{Value: value})
-}
-
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+	// setup logger
+	logger, err := logger.Setup(cfg.Env)
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	return fallback
+
+	// initialize kafka
+	kafka, err := kafka.Init(kafka.Config(cfg.Payment.Kafka))
+	if err != nil {
+		slog.Error("Failed to initialize Kafka:", "err", err)
+		cancel()
+	}
+
+	// initialize http server
+	srv, err := http.NewServer((http.Config(cfg.Payment.HTTP)))
+	if err != nil {
+		slog.Error("Failed to initialize HTTP server:", "err", err)
+		cancel()
+	}
+
+	// setup app
+	app, err := app.SetupApp(cfg, logger, srv, kafka)
+	if err != nil {
+		slog.Error("Failed to initialize app:", "err", err)
+		cancel()
+	}
+
+	// HTTP server
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := app.HTTP.Run(); err != nil {
+			slog.Error("HTTP server terminated:", "err", err)
+			cancel()
+		}
+	}()
+
+	// Wait for shutdown signal or context cancellation
+	<-graceful.Shutdown(ctx, app.Config.GracefulTimeout, map[string]graceful.Operation{
+		"kafka":       app.Kafka.Shutdown,
+		"http-server": app.HTTP.Shutdown,
+	})
+
+	wg.Wait()
+	app.Log.Warn("Application stopped")
 }
