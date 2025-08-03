@@ -40,6 +40,7 @@ func (s *Service) CreateOrder(ctx context.Context, items []domain.Item) (*domain
 		return nil, fmt.Errorf("order created but failed to emit event: %w", err)
 	}
 	slog.Info("[OrderService] Created order: %s, status: %s", order.ID, order.Status)
+	// TODO: handle ctx cancellation
 	status := <-ch
 	if status != sync.OK {
 		return order, fmt.Errorf("order created but failed to reserve items: %s", order.ID)
@@ -59,7 +60,7 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, status domain
 	// TODO: do better
 	o := domain.NewOrder(nil)
 	o.ID = orderID
-	o.Status = domain.StatusAwaitingPayment
+	o.Status = status
 
 	err := s.Repo.UpdateOrder(ctx, o)
 	slog.Info("Updating order status:", "orderID", orderID, "status", status)
@@ -71,7 +72,6 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, status domain
 
 func (s *Service) UpdateOrderAwaitingPayment(ctx context.Context, orderID string) {
 	err := s.UpdateOrder(ctx, orderID, domain.StatusAwaitingPayment)
-	s.Sync.Pull(orderID) <- sync.OK
 	if err != nil {
 		// TODO: handle errors better, ex:
 		// - cron to deal with PENDINGs for long time
@@ -80,14 +80,29 @@ func (s *Service) UpdateOrderAwaitingPayment(ctx context.Context, orderID string
 		// - fail them
 	}
 
+	ch, err := s.Sync.Pull(orderID)
+	if err != nil {
+		slog.Error("Failed to pull sync channel for order", "orderID", orderID, "err", err)
+		return
+	}
+
+	// Wait for the channel to receive a status
+	ch <- sync.OK
+
 	// push ch to map with SUCCESS
 	slog.Info("InventoryReservationSucceeded:", "orderID", orderID)
 }
 
+func (s *Service) UpdateOrderPaid(ctx context.Context, orderID string) {
+	if err := s.UpdateOrder(ctx, orderID, domain.StatusPaid); err != nil {
+		// TODO: handle errors better
+	}
+	slog.Info("Order paid:", "orderID", orderID)
+}
+
 func (s *Service) UpdateOrderFailed(ctx context.Context, orderID string) {
 	if err := s.UpdateOrder(ctx, orderID, domain.StatusFailed); err != nil {
-
+		// TODO: handle errors better
 	}
-	// update status failed
-	slog.Info("InventoryReservationFailed:", "orderID", orderID)
+	slog.Info("Order failed:", "orderID", orderID)
 }

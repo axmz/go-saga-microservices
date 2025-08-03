@@ -1,5 +1,13 @@
 package domain
 
+type Status string
+
+const (
+	StatusAvailable Status = "available"
+	StatusReserved  Status = "reserved"
+	StatusSold      Status = "sold"
+)
+
 type Product struct {
 	ID     int     `json:"id"`
 	Name   string  `json:"name"`

@@ -41,7 +41,8 @@ func (r *Repository) GetProducts(ctx context.Context) ([]domain.Product, error) 
 	return products, nil
 }
 
-func (r *Repository) ReserveItems(ctx context.Context, items []*events.Item) error {
+func (r *Repository) ReserveItems(ctx context.Context, event *events.OrderCreatedEvent) error {
+	items := event.GetItems()
 	skus := make([]string, len(items))
 	for i, item := range items {
 		skus[i] = item.GetId()
@@ -49,11 +50,19 @@ func (r *Repository) ReserveItems(ctx context.Context, items []*events.Item) err
 
 	const reserveQ = `
 		UPDATE products
-		SET    status = 'reserved'
-		WHERE  sku = ANY($1) AND status = 'available'
+		SET status = $1,
+		order_id = $2
+		WHERE sku = ANY($3) AND status = $4
 	`
 
-	res, err := r.DB.Conn().ExecContext(ctx, reserveQ, pq.Array(skus))
+	res, err := r.DB.Conn().ExecContext(
+		ctx,
+		reserveQ,
+		domain.StatusReserved,
+		event.Id,
+		pq.Array(skus),
+		domain.StatusAvailable,
+	)
 	if err != nil {
 		return err
 	}
@@ -66,20 +75,40 @@ func (r *Repository) ReserveItems(ctx context.Context, items []*events.Item) err
 	return nil
 }
 
-func (r *Repository) ReleaseItems(orderID, productID string) {
+func (r *Repository) ReleaseItems(ctx context.Context, orderID, productID string) {
 	query := `UPDATE products
-			  SET status = 'available', updated_at = CURRENT_TIMESTAMP
-			  WHERE sku = $1 AND status = 'reserved'`
-	_, err := r.DB.Conn().Exec(query, productID)
+			  SET status = $1, updated_at = CURRENT_TIMESTAMP
+			  WHERE sku = $2 AND status = $3`
+	_, err := r.DB.Conn().ExecContext(
+		ctx,
+		query,
+		domain.StatusAvailable,
+		productID,
+		domain.StatusReserved,
+	)
 	if err != nil {
 		// Handle error (e.g., log it)
 	}
 }
 
+func (r *Repository) MarkItemsSold(ctx context.Context, orderID string) error {
+	const query = `
+		UPDATE products
+		SET status = 'sold'
+		WHERE order_id = $1
+	`
+
+	_, err := r.DB.Conn().ExecContext(ctx, query, orderID)
+	return err
+}
+
 func (r *Repository) ReleaseReservedItems(ctx context.Context, orderID string) error {
-	// Note: This is a basic implementation. In a real system, we would need
-	// a reservation table to track which products were reserved for which order.
-	// For now, this is a no-op since we don't have order-to-product tracking.
-	// In production, this would need proper order-product reservation tracking.
-	return nil
+	const query = `
+		UPDATE products
+		SET status = $1, order_id = NULL
+		WHERE order_id = $2
+	`
+
+	_, err := r.DB.Conn().ExecContext(ctx, query, domain.StatusAvailable, orderID)
+	return err
 }

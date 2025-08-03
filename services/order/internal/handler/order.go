@@ -145,17 +145,17 @@ func (h *OrderHandler) InventoryEvents(ctx context.Context, m kafka.Message) {
 }
 
 func (h *OrderHandler) PaymentEvents(ctx context.Context, m kafka.Message) {
-	var envelope events.InventoryEventEnvelope
+	var envelope events.PaymentEventEnvelope
 	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
-		slog.Warn("Failed to unmarshal InventoryEventEnvelope:", "err", err)
+		slog.Warn("Failed to unmarshal PaymentEventEnvelope:", "err", err)
 		return
 	}
 
 	switch evt := envelope.Event.(type) {
-	case *events.InventoryEventEnvelope_ReservationSucceeded:
-		h.Service.UpdateOrderAwaitingPayment(ctx, evt.ReservationSucceeded.Id)
-	case *events.InventoryEventEnvelope_ReservationFailed:
-		h.Service.UpdateOrderFailed(ctx, evt.ReservationFailed.Id)
+	case *events.PaymentEventEnvelope_PaymentSucceeded:
+		h.Service.UpdateOrderPaid(ctx, evt.PaymentSucceeded.Id)
+	case *events.PaymentEventEnvelope_PaymentFailed:
+		h.Service.UpdateOrderFailed(ctx, evt.PaymentFailed.Id)
 	default:
 		slog.Warn("Unknown or missing event type in envelope")
 	}

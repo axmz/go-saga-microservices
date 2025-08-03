@@ -6,6 +6,7 @@ CREATE TABLE products (
     sku VARCHAR(100) UNIQUE NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'sold')),
     price DECIMAL(10,2) NOT NULL,
+    order_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

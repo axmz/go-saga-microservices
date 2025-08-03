@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/axmz/go-saga-microservices/inventory-service/internal/domain"
 	"github.com/axmz/go-saga-microservices/inventory-service/internal/publisher"
@@ -26,7 +27,8 @@ func (s *Service) GetProducts(ctx context.Context) ([]domain.Product, error) {
 }
 
 func (s *Service) ReserveItems(ctx context.Context, event *events.OrderCreatedEvent) error {
-	if err := s.Repo.ReserveItems(ctx, event.Items); err != nil {
+	slog.Info("InventoryReservationRequested:", "orderID", event.Id)
+	if err := s.Repo.ReserveItems(ctx, event); err != nil {
 		s.Kafka.PublishInventoryReservationFailedEvent(event.Id)
 		return err
 	}
@@ -38,7 +40,15 @@ func (s *Service) ReleaseItems(ctx context.Context) {
 	// return s.Repo.ReleaseItems(orderID, productID)
 }
 
+func (s *Service) MarkItemsSold(ctx context.Context, orderID string) {
+	slog.Warn("Payment Succeeded:", "orderID", orderID)
+	if err := s.Repo.MarkItemsSold(ctx, orderID); err != nil {
+
+	}
+}
+
 func (s *Service) ReleaseReservedItems(ctx context.Context, orderID string) {
+	slog.Warn("Payment Failed:", "orderID", orderID)
 	if err := s.Repo.ReleaseReservedItems(ctx, orderID); err != nil {
 
 	}
