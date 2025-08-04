@@ -1,83 +1,44 @@
-{{define "content"}}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body text-center">
-                <div class="mb-4">
-                    <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
-                </div>
-                <h2 class="mb-3">Order Confirmed!</h2>
-                <p class="lead">Thank you for your purchase. Your order has been successfully placed.</p>
+{{ define "content" }}
+<h1>Confirmation</h1>
 
-                <div class="alert alert-success">
-                    <strong>Order ID:</strong> {{.OrderID}}
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0"><i class="fas fa-shipping-fast me-2"></i>Shipping Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="mb-1"><strong>Status:</strong> <span
-                                        class="badge bg-warning">Processing</span></p>
-                                <p class="mb-1"><strong>Estimated Delivery:</strong> 3-5 business days</p>
-                                <p class="mb-0"><strong>Tracking:</strong> Will be available once shipped</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <p class="mb-1"><strong>Payment Method:</strong> Credit Card</p>
-                                <p class="mb-1"><strong>Payment Status:</strong> <span
-                                        class="badge bg-success">Paid</span></p>
-                                <p class="mb-0"><strong>Total Amount:</strong> $39.98</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0"><i class="fas fa-box me-2"></i>Order Details</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <strong>Widget A</strong><br>
-                                        <small class="text-muted">SKU: WIDGET-A</small>
-                                    </div>
-                                    <div class="col-md-2 text-center">
-                                        <span>2</span>
-                                    </div>
-                                    <div class="col-md-2 text-end">
-                                        <span>$39.98</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <a href="/" class="btn btn-primary me-2">
-                            <i class="fas fa-home me-2"></i>Continue Shopping
-                        </a>
-                        <a href="/products" class="btn btn-outline-primary">
-                            <i class="fas fa-box me-2"></i>Browse Products
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{{end}}
+{{ if .Order }}
+<p><strong>Order ID:</strong> <span id="order-id">{{ .Order.ID }}</span></p>
+<p><strong>Status:</strong> <span id="order-status">{{ .Order.Status }}</span></p>
+<ul>
+    {{ range .Order.Items }}
+    <li>Product ID: {{ .ProductID }}</li>
+    {{ end }}
+</ul>
+{{ if eq .Order.Status "AwaitingPayment" }}
+<p>Your order is awaiting payment or is being processed. Please complete the payment to confirm your order.</p>
+{{ else if eq .Order.Status "Processing" }}
+<p>Your order is being processed. Service workers are polling the status.</p>
+{{ else if eq .Order.Status "Paid" }}
+<p>Your order has been paid. Thank you!</p>
+{{ else if eq .Order.Status "Failed" }}
+<p>Your order has failed. Please try again or contact support.</p>
+{{ end }}
+<script>
+    (function () {
+        var orderId = document.getElementById('order-id').textContent;
+        var statusEl = document.getElementById('order-status');
+        var wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        var wsUrl = wsProto + '://' + window.location.hostname + ':8080/orders/ws?orderId=' + orderId;
+        var ws = new WebSocket(wsUrl);
+        ws.onmessage = function (event) {
+            try {
+                var data = JSON.parse(event.data);
+                if (data.status) {
+                    statusEl.textContent = data.status;
+                }
+            } catch (e) {
+                // fallback for plain text
+                statusEl.textContent = event.data;
+            }
+        };
+    })();
+</script>
+{{ else }}
+<p>Order not found.</p>
+{{ end }}
+{{ end }}

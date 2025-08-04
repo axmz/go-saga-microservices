@@ -1,5 +1,5 @@
 {{ define "content" }}
-<h1>Pay for your order</h1>
+<h1>Payment</h1>
 
 {{ if .Order }}
 <p><strong>Order ID:</strong> <span id="order-id">{{ .Order.ID }}</span></p>
@@ -10,6 +10,14 @@
     {{ end }}
 </ul>
 {{ if eq .Order.Status "AwaitingPayment" }}
+<form method="POST" action="/api/payment-success" style="display:inline;">
+    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
+    <button type="submit">Pay Success</button>
+</form>
+<form method="POST" action="/api/payment-fail" style="display:inline; margin-left: 1em;">
+    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
+    <button type="submit">Pay Fail</button>
+</form>
 {{ else if eq .Order.Status "Paid" }}
 <p>Your order has been paid. Thank you!</p>
 {{ else if eq .Order.Status "Failed" }}

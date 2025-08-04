@@ -85,7 +85,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'AwaitingPayment' && data.id) {
-                    window.location.href = '/order/' + data.id;
+                    window.location.href = '/payment/' + data.id;
                 } else if (data.status === 'failed' && data.id) {
                     window.location.href = '/fail/' + data.id;
                 } else {

@@ -46,20 +46,6 @@ func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) ConfirmationHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.URL.Query().Get("order_id")
-
-	data := map[string]interface{}{
-		"Title":   "Order Confirmation",
-		"OrderID": orderID,
-	}
-
-	err := h.Renderer.Render(w, "confirmation.html", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
 func (h *Handler) PaymentHandler(w http.ResponseWriter, r *http.Request) {
 	orderID := r.PathValue("orderId")
 	if orderID == "" {
@@ -95,6 +81,26 @@ func (h *Handler) OrderHandler(w http.ResponseWriter, r *http.Request) {
 		"Order": order,
 	}
 	err = h.Renderer.Render(w, "order.html", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) ConfirmationHandler(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue("orderId")
+	if orderID == "" {
+		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		return
+	}
+	order, err := h.Service.GetOrder(r.Context(), orderID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := map[string]*domain.Order{
+		"Order": order,
+	}
+	err = h.Renderer.Render(w, "confirmation.html", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -193,7 +199,7 @@ func (h *Handler) APIPaymentSuccessHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	http.Redirect(w, r, "/payment/"+orderID, http.StatusSeeOther)
+	http.Redirect(w, r, "/confirmation/"+orderID, http.StatusSeeOther)
 }
 
 func (h *Handler) APIPaymentFailHandler(w http.ResponseWriter, r *http.Request) {
@@ -213,5 +219,5 @@ func (h *Handler) APIPaymentFailHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	http.Redirect(w, r, "/confirmation/"+orderID, http.StatusSeeOther)
 }

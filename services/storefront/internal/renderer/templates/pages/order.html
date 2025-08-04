@@ -1,5 +1,5 @@
 {{ define "content" }}
-<h1>Order Status</h1>
+<h1>Order status</h1>
 
 {{ if .Order }}
 <p><strong>Order ID:</strong> <span id="order-id">{{ .Order.ID }}</span></p>
@@ -10,39 +10,14 @@
     {{ end }}
 </ul>
 {{ if eq .Order.Status "AwaitingPayment" }}
-<form method="POST" action="/api/payment-success" style="display:inline;">
-    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
-    <button type="submit">Pay Success</button>
-</form>
-<form method="POST" action="/api/payment-fail" style="display:inline; margin-left: 1em;">
-    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
-    <button type="submit">Pay Fail</button>
-</form>
+<p>Your order is awaiting payment. Please complete the payment to confirm your order. Visit /payment page</p>
+{{ else if eq .Order.Status "Processing" }}
+<p>Your order is being processed. Visit /confirmation page</p>
 {{ else if eq .Order.Status "Paid" }}
 <p>Your order has been paid. Thank you!</p>
 {{ else if eq .Order.Status "Failed" }}
 <p>Your order has failed. Please try again or contact support.</p>
 {{ end }}
-<script>
-    (function () {
-        var orderId = document.getElementById('order-id').textContent;
-        var statusEl = document.getElementById('order-status');
-        var wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        var wsUrl = wsProto + '://' + window.location.hostname + ':8080/orders/ws?orderId=' + orderId;
-        var ws = new WebSocket(wsUrl);
-        ws.onmessage = function (event) {
-            try {
-                var data = JSON.parse(event.data);
-                if (data.status) {
-                    statusEl.textContent = data.status;
-                }
-            } catch (e) {
-                // fallback for plain text
-                statusEl.textContent = event.data;
-            }
-        };
-    })();
-</script>
 {{ else }}
 <p>Order not found.</p>
 {{ end }}

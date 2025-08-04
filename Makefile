@@ -1,4 +1,4 @@
-.PHONY: help dev infra-up infra-down infra-restart services-start services-stop services-restart inventory order storefront clean
+.PHONY: help dev infra-up infra-down infra-restart services-start services-stop services-restart inventory order storefront payment clean
 
 # Default target
 help:
@@ -30,7 +30,7 @@ infra-down id:
 infra-restart ir: infra-down infra-up
 
 # Services management
-services-start ss: inventory order storefront
+services-start ss: inventory order storefront payment
 
 services-stop st:
 	@echo "Stopping all services..."
@@ -53,6 +53,10 @@ order o:
 storefront s:
 	@echo "Starting storefront service with Air..."
 	@cd services/storefront && make dev
+
+payment p:
+	@echo "Starting payment service with Air..."
+	@cd services/payment && make dev
 
 # Clean build artifacts
 clean c:
