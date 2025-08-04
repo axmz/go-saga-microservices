@@ -9,6 +9,12 @@ common:
       idleTimeout: 10s
       readTimeout: 10s
       writeTimeout: 10s
+    kafka:
+      addr: kafka:9092
+      producerTopic: storefront.events
+      groupTopics:
+        - payment.events 
+      groupID: storefront-service-group
   inventory:
     http:
       protocol: http

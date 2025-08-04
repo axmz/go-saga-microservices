@@ -3,7 +3,6 @@ package publisher
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/segmentio/kafka-go"
@@ -21,7 +20,6 @@ func New(writer *kafka.Writer) *Publisher {
 func (k *Publisher) PublishPaymentSucceededEvent(orderID string) error {
 	log.Printf("[Payment Service] Publishing payment success event for order: %s, status: %s", orderID, "success")
 
-	time.Sleep(time.Second * 5)
 	event := &events.PaymentEventEnvelope{
 		Event: &events.PaymentEventEnvelope_PaymentSucceeded{
 			PaymentSucceeded: &events.PaymentSucceeded{

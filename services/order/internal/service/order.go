@@ -95,7 +95,7 @@ func (s *Service) UpdateOrderAwaitingPayment(ctx context.Context, orderID string
 }
 
 func (s *Service) UpdateOrderPaid(ctx context.Context, orderID string) {
-	time.Sleep(time.Second * 5) // Simulate some processing delay
+	time.Sleep(time.Second * 5)
 	if err := s.UpdateOrder(ctx, orderID, domain.StatusPaid); err != nil {
 		// TODO: handle errors better
 	}

@@ -65,7 +65,8 @@ type Config struct {
 	} `yaml:"order"`
 
 	Storefront struct {
-		HTTP HttpServerConfig `yaml:"http"`
+		HTTP  HttpServerConfig `yaml:"http"`
+		Kafka KafkaConfig      `yaml:"kafka"`
 	} `yaml:"storefront"`
 }
 

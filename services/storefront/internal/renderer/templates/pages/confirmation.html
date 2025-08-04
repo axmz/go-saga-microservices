@@ -23,7 +23,7 @@
         var orderId = document.getElementById('order-id').textContent;
         var statusEl = document.getElementById('order-status');
         var wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        var wsUrl = wsProto + '://' + window.location.hostname + ':8080/orders/ws?orderId=' + orderId;
+        var wsUrl = wsProto + '://' + window.location.hostname + ':8080/orders/ws/' + orderId;
         var ws = new WebSocket(wsUrl);
         ws.onmessage = function (event) {
             try {

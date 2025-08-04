@@ -3,24 +3,30 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"log/slog"
 	"net/http"
-	"time"
 
+	"github.com/axmz/go-saga-microservices/pkg/events"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/domain"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/renderer"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/service"
+	"github.com/axmz/go-saga-microservices/services/storefront/internal/ws"
+	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
 )
 
-// Service URLs
 type Handler struct {
-	Service  *service.Service
-	Renderer *renderer.TemplateRenderer
+	Service   *service.Service
+	Renderer  *renderer.TemplateRenderer
+	WSManager *ws.WSManager
 }
 
-func New(service *service.Service, renderer *renderer.TemplateRenderer) *Handler {
+func New(service *service.Service, renderer *renderer.TemplateRenderer, wsManager *ws.WSManager) *Handler {
 	return &Handler{
-		Service:  service,
-		Renderer: renderer,
+		Service:   service,
+		Renderer:  renderer,
+		WSManager: wsManager,
 	}
 }
 
@@ -134,54 +140,6 @@ func (h *Handler) APICreateOrderHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(&order)
 }
 
-// WS /orders/ws?orderId=...
-func (h *Handler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
-	orderID := r.URL.Query().Get("orderId")
-	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
-		return
-	}
-	if r.Header.Get("Connection") != "Upgrade" || r.Header.Get("Upgrade") != "websocket" {
-		http.Error(w, "Not a websocket upgrade request", http.StatusBadRequest)
-		return
-	}
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		http.Error(w, "Webserver doesn't support hijacking", http.StatusInternalServerError)
-		return
-	}
-	conn, bufrw, err := hj.Hijack()
-	if err != nil {
-		http.Error(w, "Failed to hijack connection", http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close()
-	// Write WebSocket handshake response
-	bufrw.WriteString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n")
-	bufrw.Flush()
-	for {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-		ord, err := h.Service.GetOrder(ctx, orderID)
-		cancel()
-		if err != nil {
-			bufrw.WriteString("error: " + err.Error() + "\n")
-			bufrw.Flush()
-			return
-		}
-		if ord == nil {
-			bufrw.WriteString("error: Order not found\n")
-			bufrw.Flush()
-			return
-		}
-		bufrw.WriteString("status: " + ord.Status + "\n")
-		bufrw.Flush()
-		// if ord.Status == domain.StatusPaid || ord.Status == domain.StatusFailed {
-		// 	return
-		// }
-		time.Sleep(2 * time.Second)
-	}
-}
-
 func (h *Handler) APIPaymentSuccessHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Invalid form data", http.StatusBadRequest)
@@ -220,4 +178,48 @@ func (h *Handler) APIPaymentFailHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	http.Redirect(w, r, "/confirmation/"+orderID, http.StatusSeeOther)
+}
+
+func (h *Handler) OrderStatusWSHandler(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue("orderId")
+	if orderID == "" {
+		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		return
+	}
+
+	conn, err := ws.Upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("WebSocket upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	h.WSManager.Register(orderID, conn)
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("WS read error:", err)
+			break
+		}
+	}
+
+	h.WSManager.Unregister(orderID, conn)
+}
+
+func (h *Handler) PaymentEvents(ctx context.Context, m kafka.Message) {
+	var envelope events.PaymentEventEnvelope
+	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
+		slog.Warn("Failed to unmarshal PaymentEventEnvelope:", "err", err)
+		return
+	}
+
+	switch evt := envelope.Event.(type) {
+	case *events.PaymentEventEnvelope_PaymentSucceeded:
+		h.WSManager.Broadcast(evt.PaymentSucceeded.Id, "status: Paid")
+	case *events.PaymentEventEnvelope_PaymentFailed:
+		h.WSManager.Broadcast(evt.PaymentFailed.Id, "status: Failed")
+	default:
+		slog.Warn("Unknown or missing event type in envelope")
+	}
 }
