@@ -8,8 +8,9 @@ import (
 )
 
 type WSManager struct {
-	mu      sync.RWMutex
-	clients map[string]map[*websocket.Conn]bool // orderID => connections
+	mu              sync.RWMutex
+	clients         map[string]map[*websocket.Conn]bool
+	lastKnownStatus map[string]string
 }
 
 func NewWSManager() *WSManager {
@@ -21,10 +22,18 @@ func NewWSManager() *WSManager {
 func (m *WSManager) Register(orderID string, conn *websocket.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if m.clients[orderID] == nil {
 		m.clients[orderID] = make(map[*websocket.Conn]bool)
 	}
 	m.clients[orderID][conn] = true
+
+	if status, ok := m.lastKnownStatus[orderID]; ok {
+		conn.WriteJSON(map[string]string{
+			"orderId": orderID,
+			"status":  status,
+		})
+	}
 }
 
 func (m *WSManager) Unregister(orderID string, conn *websocket.Conn) {
@@ -39,8 +48,13 @@ func (m *WSManager) Unregister(orderID string, conn *websocket.Conn) {
 }
 
 func (m *WSManager) Broadcast(orderID string, status string) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.lastKnownStatus == nil {
+		m.lastKnownStatus = make(map[string]string)
+	}
+	m.lastKnownStatus[orderID] = status
 
 	for conn := range m.clients[orderID] {
 		err := conn.WriteJSON(map[string]string{
