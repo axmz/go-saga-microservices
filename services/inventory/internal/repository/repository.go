@@ -22,7 +22,7 @@ func (r *Repository) GetProducts(ctx context.Context) ([]domain.Product, error) 
 	query := `SELECT id, name, sku, status, price
 			  FROM products
 			  ORDER BY name`
-	rows, err := r.DB.Conn().QueryContext(ctx, query)
+	rows, err := r.DB.GetConn().QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (r *Repository) ReserveItems(ctx context.Context, event *events.OrderCreate
 		WHERE sku = ANY($3) AND status = $4
 	`
 
-	res, err := r.DB.Conn().ExecContext(
+	res, err := r.DB.GetConn().ExecContext(
 		ctx,
 		reserveQ,
 		domain.StatusReserved,
@@ -79,7 +79,7 @@ func (r *Repository) ReleaseItems(ctx context.Context, orderID, productID string
 	query := `UPDATE products
 			  SET status = $1, updated_at = CURRENT_TIMESTAMP
 			  WHERE sku = $2 AND status = $3`
-	_, err := r.DB.Conn().ExecContext(
+	_, err := r.DB.GetConn().ExecContext(
 		ctx,
 		query,
 		domain.StatusAvailable,
@@ -98,7 +98,7 @@ func (r *Repository) MarkItemsSold(ctx context.Context, orderID string) error {
 		WHERE order_id = $1
 	`
 
-	_, err := r.DB.Conn().ExecContext(ctx, query, orderID)
+	_, err := r.DB.GetConn().ExecContext(ctx, query, orderID)
 	return err
 }
 
@@ -109,6 +109,6 @@ func (r *Repository) ReleaseReservedItems(ctx context.Context, orderID string) e
 		WHERE order_id = $2
 	`
 
-	_, err := r.DB.Conn().ExecContext(ctx, query, domain.StatusAvailable, orderID)
+	_, err := r.DB.GetConn().ExecContext(ctx, query, domain.StatusAvailable, orderID)
 	return err
 }

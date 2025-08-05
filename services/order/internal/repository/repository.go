@@ -28,7 +28,7 @@ func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
 		itemIDs += item.ProductID
 	}
 	q := `INSERT INTO orders (id, item_ids, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`
-	_, err := r.DB.Conn().ExecContext(ctx, q, o.ID, itemIDs, o.Status, o.CreatedAt, o.UpdatedAt)
+	_, err := r.DB.GetConn().ExecContext(ctx, q, o.ID, itemIDs, o.Status, o.CreatedAt, o.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
 }
 
 func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, error) {
-	row := r.DB.Conn().QueryRowContext(ctx, `
+	row := r.DB.GetConn().QueryRowContext(ctx, `
 		SELECT id, status, item_ids, created_at, updated_at
 		FROM orders
 		WHERE id = $1
@@ -60,6 +60,6 @@ func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, er
 }
 
 func (r *Repository) UpdateOrder(ctx context.Context, o *domain.Order) error {
-	_, err := r.DB.Conn().ExecContext(ctx, `UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3`, o.Status, o.UpdatedAt, o.ID)
+	_, err := r.DB.GetConn().ExecContext(ctx, `UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3`, o.Status, o.UpdatedAt, o.ID)
 	return err
 }

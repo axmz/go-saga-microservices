@@ -44,6 +44,6 @@ func (db *DB) Shutdown(ctx context.Context) error {
 	return db.conn.Close()
 }
 
-func (db *DB) Conn() *sql.DB {
+func (db *DB) GetConn() *sql.DB {
 	return db.conn
 }
