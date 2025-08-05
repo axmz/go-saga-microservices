@@ -107,7 +107,7 @@ func (s *Service) PaymentFail(ctx context.Context, orderID string) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(PaymentServiceURL+"/payment-fail/", "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(PaymentServiceURL+"/payment-fail", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}

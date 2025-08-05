@@ -216,9 +216,10 @@ func (h *Handler) PaymentEvents(ctx context.Context, m kafka.Message) {
 
 	switch evt := envelope.Event.(type) {
 	case *events.PaymentEventEnvelope_PaymentSucceeded:
-		h.WSManager.Broadcast(evt.PaymentSucceeded.Id, "status: Paid")
+		h.WSManager.Broadcast(evt.PaymentSucceeded.Id, "Paid")
 	case *events.PaymentEventEnvelope_PaymentFailed:
-		h.WSManager.Broadcast(evt.PaymentFailed.Id, "status: Failed")
+		h.WSManager.Broadcast(evt.PaymentFailed.Id, "Failed")
+
 	default:
 		slog.Warn("Unknown or missing event type in envelope")
 	}

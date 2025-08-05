@@ -51,6 +51,7 @@ func (m *WSManager) Broadcast(orderID string, status string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// in case broadcast is called before any clients are registered
 	if m.lastKnownStatus == nil {
 		m.lastKnownStatus = make(map[string]string)
 	}
@@ -64,5 +65,6 @@ func (m *WSManager) Broadcast(orderID string, status string) {
 		if err != nil {
 			slog.Warn("WS write error:", "err", err)
 		}
+		conn.Close()
 	}
 }

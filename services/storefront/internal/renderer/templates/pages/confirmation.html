@@ -9,15 +9,6 @@
     <li>Product ID: {{ .ProductID }}</li>
     {{ end }}
 </ul>
-{{ if eq .Order.Status "AwaitingPayment" }}
-<p>Your order is awaiting payment or is being processed. Please complete the payment to confirm your order.</p>
-{{ else if eq .Order.Status "Processing" }}
-<p>Your order is being processed. Service workers are polling the status.</p>
-{{ else if eq .Order.Status "Paid" }}
-<p>Your order has been paid. Thank you!</p>
-{{ else if eq .Order.Status "Failed" }}
-<p>Your order has failed. Please try again or contact support.</p>
-{{ end }}
 <script>
     (function () {
         var orderId = document.getElementById('order-id').textContent;
@@ -36,6 +27,11 @@
                 statusEl.textContent = event.data;
             }
             ws.close();
+        };
+        ws.onopen = function () {
+            setTimeout(function () {
+                ws.close();
+            }, 5000);
         };
     })();
 </script>
