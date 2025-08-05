@@ -7,12 +7,12 @@ import (
 	"os"
 	"sync"
 
+	"github.com/axmz/go-graceful"
 	"github.com/axmz/go-saga-microservices/config"
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
 	"github.com/axmz/go-saga-microservices/lib/adapter/http"
 	"github.com/axmz/go-saga-microservices/lib/adapter/kafka"
 	"github.com/axmz/go-saga-microservices/lib/logger"
-	"github.com/axmz/go-saga-microservices/pkg/graceful"
 	"github.com/axmz/go-saga-microservices/services/order/internal/app"
 )
 

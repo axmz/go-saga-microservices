@@ -1,15 +1,14 @@
 go 1.24.4
 
 use (
+	./config
 	./lib/adapter/db
 	./lib/adapter/http
 	./lib/adapter/kafka
-	./services/storefront
-	./services/order
-	./services/inventory
-	./services/payment
 	./lib/logger
-	./pkg/graceful
 	./pkg/events
-	./config
+	./services/inventory
+	./services/order
+	./services/payment
+	./services/storefront
 )

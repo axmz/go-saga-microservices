@@ -1,7 +1,6 @@
 transaction outbox - DRD Postrgres + Kafka
 auto release reserved after timeout
 next.js
-update graceful
 apply configs from adapters
 start multiple
 improve log, add service name
@@ -12,5 +11,6 @@ use interfaces
 review makefile
 cleanup
 change logs to DEBUG
-sw
 check timeouts
+deploy
+delete all kafka and start over

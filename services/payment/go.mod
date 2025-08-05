@@ -3,8 +3,9 @@ module github.com/axmz/go-saga-microservices/payment-service
 go 1.24.4
 
 require (
-	github.com/lib/pq v1.10.9
-	github.com/segmentio/kafka-go v0.4.42
+	github.com/axmz/go-graceful v0.1.1
+	github.com/segmentio/kafka-go v0.4.48
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
