@@ -1,119 +1,60 @@
 package service
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
 
 	"github.com/axmz/go-saga-microservices/config"
-	"github.com/axmz/go-saga-microservices/services/storefront/internal/domain"
+	httppb "github.com/axmz/go-saga-microservices/pkg/proto/http"
+	"github.com/axmz/go-saga-microservices/services/storefront/internal/client"
 )
 
 type Service struct {
-	cfg *config.Config
+	cfg             *config.Config
+	orderClient     client.OrderClient
+	paymentClient   client.PaymentClient
+	inventoryClient client.InventoryClient
 }
 
-func New(cfg *config.Config) *Service {
+func New(cfg *config.Config, orderClient client.OrderClient, paymentClient client.PaymentClient, inventoryClient client.InventoryClient) *Service {
 	return &Service{
-		cfg: cfg,
+		cfg:             cfg,
+		orderClient:     orderClient,
+		paymentClient:   paymentClient,
+		inventoryClient: inventoryClient,
 	}
 }
 
-func (s *Service) GetOrder(ctx context.Context, orderID string) (*domain.Order, error) {
-	OrderServiceURL := s.cfg.Order.HTTP.URL()
-	resp, err := http.Get(OrderServiceURL + "/orders/" + orderID)
+func (s *Service) GetOrder(ctx context.Context, orderID string) (*httppb.Order, error) {
+	resp, err := s.orderClient.GetOrder(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("order service returned status: %d", resp.StatusCode)
-	}
-	var order domain.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return nil, err
-	}
-	return &order, nil
+	return resp.Order, nil
 }
 
-func (s *Service) GetAllProducts(ctx context.Context) ([]domain.Product, error) {
-	// Call inventory service to get available products
-	InventoryServiceURL := s.cfg.Inventory.HTTP.URL()
-	resp, err := http.Get(InventoryServiceURL + "/products")
+func (s *Service) GetProducts(ctx context.Context) ([]*httppb.Product, error) {
+	resp, err := s.inventoryClient.GetProducts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to call inventory service: %v", err)
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("inventory service returned status: %d", resp.StatusCode)
-	}
-
-	var products []domain.Product
-	if err := json.NewDecoder(resp.Body).Decode(&products); err != nil {
-		return nil, fmt.Errorf("failed to decode products: %v", err)
-	}
-
-	return products, nil
+	return resp.Products, nil
 }
 
-func (s *Service) CreateOrder(ctx context.Context, orderReq domain.CreateOrderRequest) (*domain.Order, error) {
-	jsonData, err := json.Marshal(orderReq)
+func (s *Service) CreateOrder(ctx context.Context, orderReq *httppb.CreateOrderRequest) (*httppb.Order, error) {
+	resp, err := s.orderClient.CreateOrder(ctx, orderReq)
 	if err != nil {
 		return nil, err
 	}
 
-	OrderServiceURL := s.cfg.Order.HTTP.URL()
-	resp, err := http.Post(OrderServiceURL+"/orders", "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("order service returned status: %d", resp.StatusCode)
-	}
-
-	var order domain.Order
-	if err := json.NewDecoder(resp.Body).Decode(&order); err != nil {
-		return nil, err
-	}
-
-	return &order, nil
+	return resp.Order, nil
 }
 
 func (s *Service) PaymentSuccess(ctx context.Context, orderID string) error {
-	PaymentServiceURL := s.cfg.Payment.HTTP.URL()
-	jsonData, err := json.Marshal(map[string]string{"order_id": orderID})
-	if err != nil {
-		return err
-	}
-	resp, err := http.Post(PaymentServiceURL+"/payment-success", "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("payment service returned status: %d", resp.StatusCode)
-	}
-	return nil
+	protoReq := &httppb.PaymentSuccessRequest{OrderId: orderID}
+	return s.paymentClient.PaymentSuccess(ctx, protoReq)
 }
 
 func (s *Service) PaymentFail(ctx context.Context, orderID string) error {
-	PaymentServiceURL := s.cfg.Payment.HTTP.URL()
-	jsonData, err := json.Marshal(map[string]string{"order_id": orderID})
-	if err != nil {
-		return err
-	}
-	resp, err := http.Post(PaymentServiceURL+"/payment-fail", "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("payment service returned status: %d", resp.StatusCode)
-	}
-	return nil
+	protoReq := &httppb.PaymentFailRequest{OrderId: orderID}
+	return s.paymentClient.PaymentFail(ctx, protoReq)
 }

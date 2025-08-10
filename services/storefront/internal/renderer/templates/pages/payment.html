@@ -2,22 +2,16 @@
 <h1>Payment</h1>
 
 {{ if .Order }}
-<p><strong>Order ID:</strong> <span id="order-id">{{ .Order.ID }}</span></p>
+<p><strong>Order ID:</strong> <span id="order-id">{{ .Order.Id }}</span></p>
 <p><strong>Status:</strong> <span id="order-status">{{ .Order.Status }}</span></p>
 <ul>
     {{ range .Order.Items }}
-    <li>Product ID: {{ .ProductID }}</li>
+    <li>Product ID: {{ .ProductId }}</li>
     {{ end }}
 </ul>
 {{ if eq .Order.Status "AwaitingPayment" }}
-<form method="POST" action="/api/payment-success" style="display:inline;">
-    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
-    <button type="submit">Pay Success</button>
-</form>
-<form method="POST" action="/api/payment-fail" style="display:inline; margin-left: 1em;">
-    <input type="hidden" id="order_id" name="order_id" value="{{ .Order.ID }}" />
-    <button type="submit">Pay Fail</button>
-</form>
+<button id="pay-success-btn" type="button">Pay Success</button>
+<button id="pay-fail-btn" type="button" style="margin-left: 1em;">Pay Fail</button>
 {{ else if eq .Order.Status "Paid" }}
 <p>Your order has been paid. Thank you!</p>
 {{ else if eq .Order.Status "Failed" }}
@@ -26,21 +20,45 @@
 <script>
     (function () {
         var orderId = document.getElementById('order-id').textContent;
-        var statusEl = document.getElementById('order-status');
-        var wsProto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        var wsUrl = wsProto + '://' + window.location.hostname + ':8080/orders/ws?orderId=' + orderId;
-        var ws = new WebSocket(wsUrl);
-        ws.onmessage = function (event) {
-            try {
-                var data = JSON.parse(event.data);
-                if (data.status) {
-                    statusEl.textContent = data.status;
-                }
-            } catch (e) {
-                // fallback for plain text
-                statusEl.textContent = event.data;
-            }
-        };
+        var paySuccessBtn = document.getElementById('pay-success-btn');
+        if (paySuccessBtn) {
+            paySuccessBtn.addEventListener('click', function () {
+                sendPaymentRequest('/api/payment-success', { order_id: orderId });
+            });
+        }
+
+        var payFailBtn = document.getElementById('pay-fail-btn');
+        if (payFailBtn) {
+            payFailBtn.addEventListener('click', function () {
+                sendPaymentRequest('/api/payment-fail', { order_id: orderId });
+            });
+        }
+
+        function sendPaymentRequest(url, data) {
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(function (responseData) {
+                    console.log('Payment request successful:', responseData);
+                    if (responseData.success) {
+                        window.location.href = '/confirmation/' + orderId;
+                    }
+                })
+                .catch(function (error) {
+                    console.error('Payment request failed:', error);
+                    alert('Payment request failed. Please try again.');
+                });
+        }
     })();
 </script>
 {{ else }}

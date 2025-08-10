@@ -42,7 +42,7 @@ func SetupApp(
 	han := handler.New(svc)
 	con := consumer.New(kfk.Reader, han)
 	mux := router.New(svc, han)
-	srv.Router.Handler = mux
+	srv.Router.Handler = http.LoggingMiddleware(mux)
 
 	app := &App{
 		Config:   cfg,

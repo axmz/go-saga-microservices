@@ -21,7 +21,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title">{{.Name}}</h5>
-                    <p class="card-text">SKU: {{.SKU}}</p>
+                    <p class="card-text">SKU: {{.Sku}}</p>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="product-price">${{printf "%.2f" .Price}}</span>
                         {{if eq .Status "available"}}
@@ -36,9 +36,9 @@
                     </div>
                     {{if eq .Status "available"}}
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="{{.SKU}}" id="product-{{.ID}}"
+                        <input class="form-check-input" type="checkbox" value="{{.Sku}}" id="product-{{.Id}}"
                             name="selected_products">
-                        <label class="form-check-label" for="product-{{.ID}}">
+                        <label class="form-check-label" for="product-{{.Id}}">
                             Select for order
                         </label>
                     </div>
@@ -84,10 +84,8 @@
         })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'AwaitingPayment' && data.id) {
-                    window.location.href = '/payment/' + data.id;
-                } else if (data.status === 'failed' && data.id) {
-                    window.location.href = '/fail/' + data.id;
+                if (data.order.status === 'AwaitingPayment' && data.order.id) {
+                    window.location.href = '/payment/' + data.order.id;
                 } else {
                     alert('Failed to place order.');
                     btn.disabled = false;

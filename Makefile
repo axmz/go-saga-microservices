@@ -81,5 +81,5 @@ buf-install:
 buf-gen: buf-install
 	@echo "Generating Go code from proto files using buf..."
 	@buf generate
-	@echo "go mod tidy in pkg/events"
-	@cd ./pkg/events && go mod tidy
+	@echo "go mod tidy in pkg/proto"
+	@cd ./pkg/proto && go mod tidy

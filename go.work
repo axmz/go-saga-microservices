@@ -2,11 +2,11 @@ go 1.24.4
 
 use (
 	./config
-	./lib/adapter/db
-	./lib/adapter/http
-	./lib/adapter/kafka
-	./lib/logger
-	./pkg/events
+	./pkg/adapter/db
+	./pkg/adapter/http
+	./pkg/adapter/kafka
+	./pkg/logger
+	./pkg/proto
 	./services/inventory
 	./services/order
 	./services/payment

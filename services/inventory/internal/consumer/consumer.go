@@ -13,10 +13,10 @@ import (
 
 type Consumer struct {
 	Reader  *kafka.Reader
-	Handler *handler.InventoryHandler
+	Handler *handler.Handler
 }
 
-func New(r *kafka.Reader, h *handler.InventoryHandler) *Consumer {
+func New(r *kafka.Reader, h *handler.Handler) *Consumer {
 	return &Consumer{Reader: r, Handler: h}
 }
 
@@ -34,6 +34,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 			continue
 		}
 
+		slog.Info("Kafka message", "topic", message.Topic, "partition", message.Partition, "offset", message.Offset)
 		switch message.Topic {
 		case "order.events":
 			c.Handler.OrderEvents(ctx, message)

@@ -6,6 +6,7 @@ import (
 	"github.com/axmz/go-saga-microservices/config"
 	"github.com/axmz/go-saga-microservices/lib/adapter/http"
 	"github.com/axmz/go-saga-microservices/lib/adapter/kafka"
+	"github.com/axmz/go-saga-microservices/services/storefront/internal/client"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/consumer"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/handler"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/renderer"
@@ -32,11 +33,14 @@ func SetupApp(
 	wsManager *ws.WSManager,
 	kfk *kafka.Broker,
 ) (*App, error) {
-	svc := service.New(cfg)
+	ocl := client.NewHTTPOrderClient(cfg.Order.HTTP.URL())
+	pcl := client.NewHTTPPaymentClient(cfg.Payment.HTTP.URL())
+	icl := client.NewHTTPInventoryClient(cfg.Inventory.HTTP.URL())
+	svc := service.New(cfg, ocl, pcl, icl)
 	han := handler.New(svc, renderer, wsManager)
 	mux := router.New(han, svc, renderer)
 	con := consumer.New(kfk.Reader, han)
-	srv.Router.Handler = mux
+	srv.Router.Handler = http.LoggingMiddleware(mux)
 
 	app := &App{
 		Config:   cfg,

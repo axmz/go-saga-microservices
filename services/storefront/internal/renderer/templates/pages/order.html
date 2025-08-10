@@ -2,11 +2,11 @@
 <h1>Order status</h1>
 
 {{ if .Order }}
-<p><strong>Order ID:</strong> <span id="order-id">{{ .Order.ID }}</span></p>
+<p><strong>Order ID:</strong> <span id="order-id">{{ .Order.Id }}</span></p>
 <p><strong>Status:</strong> <span id="order-status">{{ .Order.Status }}</span></p>
 <ul>
     {{ range .Order.Items }}
-    <li>Product ID: {{ .ProductID }}</li>
+    <li>Product ID: {{ .ProductId }}</li>
     {{ end }}
 </ul>
 {{ if eq .Order.Status "AwaitingPayment" }}

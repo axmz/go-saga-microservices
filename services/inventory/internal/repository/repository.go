@@ -6,7 +6,7 @@ import (
 
 	"github.com/axmz/go-saga-microservices/inventory-service/internal/domain"
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
-	"github.com/axmz/go-saga-microservices/pkg/events"
+	"github.com/axmz/go-saga-microservices/pkg/proto/events"
 	"github.com/lib/pq"
 )
 

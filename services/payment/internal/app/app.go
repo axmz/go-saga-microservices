@@ -31,7 +31,7 @@ func SetupApp(
 	svc := service.New(pub)
 	han := handler.New(svc)
 	mux := router.New(han)
-	srv.Router.Handler = mux
+	srv.Router.Handler = http.LoggingMiddleware(mux)
 
 	app := &App{
 		Config:   cfg,

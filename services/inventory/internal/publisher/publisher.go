@@ -3,10 +3,9 @@ package publisher
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"log/slog"
 
-	"github.com/axmz/go-saga-microservices/pkg/events"
+	"github.com/axmz/go-saga-microservices/pkg/proto/events"
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
 )
@@ -20,7 +19,7 @@ func New(writer *kafka.Writer) *Publisher {
 }
 
 func (k *Publisher) PublishInventoryReservationSucceededEvent(orderID string) {
-	log.Printf("[InventoryService] Publishing inventory reservation success event for order: %s, status: %s", orderID, "success")
+	slog.Info("[InventoryService] Publishing inventory reservation success event for order: %s, status: %s", orderID, "success")
 
 	event := &events.InventoryEventEnvelope{
 		Event: &events.InventoryEventEnvelope_ReservationSucceeded{
@@ -41,19 +40,19 @@ func (k *Publisher) PublishInventoryReservationSucceededEvent(orderID string) {
 	})
 
 	if err != nil {
-		log.Printf("Error publishing inventory reservation success event: %v", err)
+		slog.Error("Error publishing inventory reservation success event: ", "err", err)
 	}
 }
 
 func (k *Publisher) PublishInventoryReservationFailedEvent(orderID string) {
-	log.Printf("[InventoryService] Publishing inventory reservation failed event for order: %s, status: %s", orderID, "failed")
+	slog.Info("[InventoryService] Publishing inventory reservation failed event for order: %s, status: %s", orderID, "failed")
 
 	event := &events.InventoryReservationFailed{
 		Id: orderID,
 	}
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
-		log.Printf("Error marshaling inventory reservation event: %v", err)
+		slog.Error("Error marshaling inventory reservation event: ", "err", err)
 		return
 	}
 	err = k.Writer.WriteMessages(context.Background(), kafka.Message{
@@ -61,6 +60,6 @@ func (k *Publisher) PublishInventoryReservationFailedEvent(orderID string) {
 		Value: eventJSON,
 	})
 	if err != nil {
-		log.Printf("Error publishing inventory reservation failed event: %v", err)
+		slog.Error("Error publishing inventory reservation failed event: %v", err)
 	}
 }

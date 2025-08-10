@@ -2,18 +2,25 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
-	"log"
+	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
-	"github.com/axmz/go-saga-microservices/pkg/events"
-	"github.com/axmz/go-saga-microservices/services/storefront/internal/domain"
+	httputils "github.com/axmz/go-saga-microservices/lib/adapter/http"
+	"github.com/axmz/go-saga-microservices/pkg/proto/events"
+	httppb "github.com/axmz/go-saga-microservices/pkg/proto/http"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/renderer"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/service"
 	"github.com/axmz/go-saga-microservices/services/storefront/internal/ws"
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+)
+
+// TODO: DRY
+const (
+	OrderIDPathParam = "orderId"
 )
 
 type Handler struct {
@@ -30,184 +37,209 @@ func New(service *service.Service, renderer *renderer.TemplateRenderer, wsManage
 	}
 }
 
-func (h *Handler) HomeHandler(w http.ResponseWriter, r *http.Request) {
+// PAGES
+func (h *Handler) HomePage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	products, err := h.Service.GetAllProducts(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		err := errors.New("not found")
+		slog.Warn("HomePage not found", "path", r.URL.Path, "err", err)
+		httputils.ErrorNotFound(w, err)
 		return
 	}
 
-	data := map[string]interface{}{
+	products, err := h.Service.GetProducts(r.Context())
+	if err != nil {
+		slog.Error("GetProducts failed", "err", err)
+		httputils.ErrorInternal(w, err)
+		return
+	}
+
+	if err = h.Renderer.Render(w, "home.html", map[string]any{
 		"Products": products,
 		"Title":    "Saga Microservices Storefront",
-	}
-
-	err = h.Renderer.Render(w, "home.html", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func (h *Handler) PaymentHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.PathValue("orderId")
-	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
+	}); err != nil {
+		slog.Error("Render home.html failed", "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
+	slog.Info("HomePage served", "status", http.StatusOK)
+}
+
+func (h *Handler) PaymentPage(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue(OrderIDPathParam)
+	if orderID == "" {
+		slog.Warn("PaymentPage missing orderId")
+		httputils.ErrorBadRequest(w, errors.New("missing orderId"))
+		return
+	}
+
 	order, err := h.Service.GetOrder(r.Context(), orderID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("GetOrder failed", "orderId", orderID, "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
-	data := map[string]*domain.Order{
+
+	if err = h.Renderer.Render(w, "payment.html", map[string]any{
 		"Order": order,
+	}); err != nil {
+		slog.Error("Render payment.html failed", "orderId", orderID, "err", err)
+		httputils.ErrorInternal(w, err)
+		return
 	}
-	err = h.Renderer.Render(w, "payment.html", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	slog.Info("PaymentPage served", "orderId", orderID, "status", http.StatusOK)
 }
 
-func (h *Handler) OrderHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.PathValue("orderId")
+func (h *Handler) OrderPage(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue(OrderIDPathParam)
 	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		slog.Warn("OrderPage missing orderId")
+		httputils.ErrorBadRequest(w, errors.New("missing orderId"))
 		return
 	}
+
 	order, err := h.Service.GetOrder(r.Context(), orderID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("GetOrder failed", "orderId", orderID, "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
-	data := map[string]*domain.Order{
+
+	if err = h.Renderer.Render(w, "order.html", map[string]*httppb.Order{
 		"Order": order,
+	}); err != nil {
+		slog.Error("Render order.html failed", "orderId", orderID, "err", err)
+		httputils.ErrorInternal(w, err)
+		return
 	}
-	err = h.Renderer.Render(w, "order.html", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	slog.Info("OrderPage served", "orderId", orderID, "status", http.StatusOK)
 }
 
-func (h *Handler) ConfirmationHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.PathValue("orderId")
+func (h *Handler) ConfirmationPage(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue(OrderIDPathParam)
 	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		slog.Warn("ConfirmationPage missing orderId")
+		httputils.ErrorBadRequest(w, errors.New("missing orderId"))
 		return
 	}
+
 	order, err := h.Service.GetOrder(r.Context(), orderID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("GetOrder failed", "orderId", orderID, "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
-	data := map[string]*domain.Order{
+
+	if err = h.Renderer.Render(w, "confirmation.html", map[string]*httppb.Order{
 		"Order": order,
+	}); err != nil {
+		slog.Error("Render confirmation.html failed", "orderId", orderID, "err", err)
+		httputils.ErrorInternal(w, err)
+		return
 	}
-	err = h.Renderer.Render(w, "confirmation.html", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	slog.Info("ConfirmationPage served", "orderId", orderID, "status", http.StatusOK)
 }
 
-func (h *Handler) APIProductsHandler(w http.ResponseWriter, r *http.Request) {
-	products, err := h.Service.GetAllProducts(r.Context())
+// API
+func (h *Handler) APIGetProducts(w http.ResponseWriter, r *http.Request) {
+	products, err := h.Service.GetProducts(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("APIGetProducts GetProducts failed", "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	slog.Info("APIGetProducts success", "count", len(products))
+	h.respondWithGetProductsResponse(w, products)
 }
 
-func (h *Handler) APICreateOrderHandler(w http.ResponseWriter, r *http.Request) {
-	var req domain.CreateOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+func (h *Handler) APICreateOrder(w http.ResponseWriter, r *http.Request) {
+	req, err := h.processCreateOrderRequest(r)
+	if err != nil {
+		slog.Warn("APICreateOrder bad request", "err", err)
+		httputils.ErrorBadRequest(w, err)
 		return
 	}
 
 	order, err := h.Service.CreateOrder(r.Context(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("CreateOrder failed", "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(&order)
+	slog.Info("APICreateOrder success", "orderId", order.Id)
+	h.respondWithCreateOrderSuccess(w, order)
 }
 
-func (h *Handler) APIPaymentSuccessHandler(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+func (h *Handler) APIPaymentSuccess(w http.ResponseWriter, r *http.Request) {
+	req, err := h.processPaymentSuccessRequest(r)
+	if err != nil {
+		slog.Warn("APIPaymentSuccess bad request", "err", err)
+		httputils.ErrorBadRequest(w, err)
 		return
 	}
 
-	orderID := r.FormValue("order_id")
-	if orderID == "" {
-		http.Error(w, "Missing order_id", http.StatusBadRequest)
+	if err := h.Service.PaymentSuccess(r.Context(), req.OrderId); err != nil {
+		slog.Error("PaymentSuccess failed", "orderId", req.OrderId, "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
 
-	if err := h.Service.PaymentSuccess(r.Context(), orderID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/confirmation/"+orderID, http.StatusSeeOther)
+	slog.Info("APIPaymentSuccess success", "orderId", req.OrderId)
+	h.respondWithPaymentSuccess(w)
 }
 
-func (h *Handler) APIPaymentFailHandler(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+func (h *Handler) APIPaymentFail(w http.ResponseWriter, r *http.Request) {
+	req, err := h.processPaymentFailRequest(r)
+	if err != nil {
+		slog.Warn("APIPaymentFail bad request", "err", err)
+		httputils.ErrorBadRequest(w, err)
 		return
 	}
 
-	orderID := r.FormValue("order_id")
-	if orderID == "" {
-		http.Error(w, "Missing order_id", http.StatusBadRequest)
+	if err := h.Service.PaymentFail(r.Context(), req.OrderId); err != nil {
+		slog.Error("PaymentFail failed", "orderId", req.OrderId, "err", err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
 
-	if err := h.Service.PaymentFail(r.Context(), orderID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/confirmation/"+orderID, http.StatusSeeOther)
+	slog.Info("APIPaymentFail success", "orderId", req.OrderId)
+	h.respondWithPaymentFail(w)
 }
 
-func (h *Handler) OrderStatusWSHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.PathValue("orderId")
+// WS
+func (h *Handler) WSOrderStatus(w http.ResponseWriter, r *http.Request) {
+	orderID := r.PathValue(OrderIDPathParam)
 	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		httputils.ErrorBadRequest(w, errors.New("missing orderId"))
 		return
 	}
 
 	conn, err := ws.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("WebSocket upgrade error:", err)
+		slog.Warn("WebSocket upgrade error:", "err", err)
 		return
 	}
 	defer conn.Close()
 
+	slog.Info("WS connected", "orderId", orderID, "remote", r.RemoteAddr)
 	h.WSManager.Register(orderID, conn)
 
 	for {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("WS read error:", err)
+			slog.Warn("WS read error:", "err", err)
 			break
 		}
 	}
 
 	h.WSManager.Unregister(orderID, conn)
+	slog.Info("WS disconnected", "orderId", orderID)
 }
 
+// EVENTS
 func (h *Handler) PaymentEvents(ctx context.Context, m kafka.Message) {
+	slog.Info("PaymentEvents received", "topic", m.Topic, "partition", m.Partition, "offset", m.Offset)
 	var envelope events.PaymentEventEnvelope
 	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
 		slog.Warn("Failed to unmarshal PaymentEventEnvelope:", "err", err)
@@ -216,11 +248,79 @@ func (h *Handler) PaymentEvents(ctx context.Context, m kafka.Message) {
 
 	switch evt := envelope.Event.(type) {
 	case *events.PaymentEventEnvelope_PaymentSucceeded:
-		h.WSManager.Broadcast(evt.PaymentSucceeded.Id, "Paid")
+		orderID := evt.PaymentSucceeded.Id
+		slog.Info("Payment event: succeeded", "orderId", orderID)
+		h.WSManager.Broadcast(orderID, "Paid")
 	case *events.PaymentEventEnvelope_PaymentFailed:
-		h.WSManager.Broadcast(evt.PaymentFailed.Id, "Failed")
+		orderID := evt.PaymentFailed.Id
+		slog.Info("Payment event: failed", "orderId", orderID)
+		h.WSManager.Broadcast(orderID, "Failed")
 
 	default:
 		slog.Warn("Unknown or missing event type in envelope")
 	}
+}
+
+// REQ PROCESSING
+func (h *Handler) parseProtoJSONBody(r *http.Request, msg proto.Message) error {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Warn("Read body failed", "path", r.URL.Path, "err", err)
+		return err
+	}
+
+	if err := protojson.Unmarshal(body, msg); err != nil {
+		typeName := string(msg.ProtoReflect().Descriptor().FullName())
+		slog.Warn("Unmarshal "+typeName+" failed", "err", err, "bytes", len(body))
+		return err
+	}
+	return nil
+}
+
+func (h *Handler) processCreateOrderRequest(r *http.Request) (*httppb.CreateOrderRequest, error) {
+	req := new(httppb.CreateOrderRequest)
+	if err := h.parseProtoJSONBody(r, req); err != nil {
+		return nil, err
+	}
+	slog.Debug("Parsed CreateOrderRequest", "items", len(req.GetItems()))
+	return req, nil
+}
+
+func (h *Handler) processPaymentSuccessRequest(r *http.Request) (*httppb.PaymentSuccessRequest, error) {
+	req := new(httppb.PaymentSuccessRequest)
+	if err := h.parseProtoJSONBody(r, req); err != nil {
+		return nil, err
+	}
+	slog.Debug("Parsed PaymentSuccessRequest", "orderId", req.OrderId)
+	return req, nil
+}
+
+func (h *Handler) processPaymentFailRequest(r *http.Request) (*httppb.PaymentFailRequest, error) {
+	req := new(httppb.PaymentFailRequest)
+	if err := h.parseProtoJSONBody(r, req); err != nil {
+		return nil, err
+	}
+	slog.Debug("Parsed PaymentFailRequest", "orderId", req.OrderId)
+	return req, nil
+}
+
+// RESPONSES
+func (h *Handler) respondWithPaymentFail(w http.ResponseWriter) {
+	response := &httppb.PaymentFailResponse{Success: true}
+	httputils.RespondJSON(w, response, http.StatusOK)
+}
+
+func (h *Handler) respondWithPaymentSuccess(w http.ResponseWriter) {
+	response := &httppb.PaymentSuccessResponse{Success: true}
+	httputils.RespondJSON(w, response, http.StatusOK)
+}
+
+func (h *Handler) respondWithGetProductsResponse(w http.ResponseWriter, products []*httppb.Product) {
+	response := &httppb.GetProductsResponse{Products: products}
+	httputils.RespondJSON(w, response, http.StatusOK)
+}
+
+func (h *Handler) respondWithCreateOrderSuccess(w http.ResponseWriter, order *httppb.Order) {
+	response := &httppb.CreateOrderResponse{Order: order}
+	httputils.RespondJSON(w, response, http.StatusCreated)
 }

@@ -2,88 +2,77 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"log"
-
-	"github.com/axmz/go-saga-microservices/pkg/events"
+	httputils "github.com/axmz/go-saga-microservices/lib/adapter/http"
+	"github.com/axmz/go-saga-microservices/pkg/proto/events"
+	httppb "github.com/axmz/go-saga-microservices/pkg/proto/http"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/axmz/go-saga-microservices/services/order/internal/service"
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
 )
 
-type OrderHandler struct {
+type Handler struct {
 	Service *service.Service
 }
 
-func New(service *service.Service) *OrderHandler {
-	return &OrderHandler{
+func New(service *service.Service) *Handler {
+	return &Handler{
 		Service: service,
 	}
 }
 
-// POST /orders
-func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Items []domain.Item `json:"items"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
+	domainItems, err := h.processCreateOrderRequest(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if len(req.Items) == 0 {
-		http.Error(w, "No items provided", http.StatusBadRequest)
-		return
-	}
-
-	order, err := h.Service.CreateOrder(r.Context(), req.Items)
+	order, err := h.Service.CreateOrder(r.Context(), domainItems)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: DRY
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(&order)
+	h.respondWithCreateOrderSuccess(w, order)
 }
 
-// GET /orders/orderID...
-func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	orderID := r.PathValue("orderID")
 	if orderID == "" {
-		http.Error(w, "Missing orderID", http.StatusBadRequest)
+		httputils.ErrorBadRequest(w, errors.New("missing orderId"))
 		return
 	}
+
 	ord, err := h.Service.GetOrder(r.Context(), orderID)
 	if err != nil {
 		if errors.Is(err, domain.ErrOrderNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
-			log.Printf("failed to get order: %v", err)
+			slog.Error("failed to get order", "err", err)
 		}
 		return
 	}
+
 	if ord != nil {
-		log.Printf("[OrderService] Fetched order: %s, status: %s", ord.ID, ord.Status)
+		slog.Info("Fetched order", "id", ord.ID, "status", ord.Status)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ord)
+
+	h.respondWithGetOrderSuccess(w, ord)
 }
 
-// WS /orders/ws?orderId=...
-func (h *OrderHandler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
 	orderID := r.URL.Query().Get("orderId")
 	if orderID == "" {
-		http.Error(w, "Missing orderId", http.StatusBadRequest)
+		httputils.ErrorBadRequest(w, errors.New("missing orderId"))
 		return
 	}
 	if r.Header.Get("Connection") != "Upgrade" || r.Header.Get("Upgrade") != "websocket" {
@@ -127,13 +116,14 @@ func (h *OrderHandler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *OrderHandler) InventoryEvents(ctx context.Context, m kafka.Message) {
+func (h *Handler) InventoryEvents(ctx context.Context, m kafka.Message) {
 	var envelope events.InventoryEventEnvelope
 	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
 		slog.Warn("failed to unmarshal InventoryEventEnvelope: ", "err", err)
 		return
 	}
 
+	slog.Info("Received inventory event", "topic", m.Topic, "partition", m.Partition, "offset", m.Offset)
 	switch evt := envelope.Event.(type) {
 	case *events.InventoryEventEnvelope_ReservationSucceeded:
 		h.Service.UpdateOrderAwaitingPayment(ctx, evt.ReservationSucceeded.Id)
@@ -144,13 +134,14 @@ func (h *OrderHandler) InventoryEvents(ctx context.Context, m kafka.Message) {
 	}
 }
 
-func (h *OrderHandler) PaymentEvents(ctx context.Context, m kafka.Message) {
+func (h *Handler) PaymentEvents(ctx context.Context, m kafka.Message) {
 	var envelope events.PaymentEventEnvelope
 	if err := proto.Unmarshal(m.Value, &envelope); err != nil {
 		slog.Warn("Failed to unmarshal PaymentEventEnvelope:", "err", err)
 		return
 	}
 
+	slog.Info("Received payment event", "topic", m.Topic, "partition", m.Partition, "offset", m.Offset)
 	switch evt := envelope.Event.(type) {
 	case *events.PaymentEventEnvelope_PaymentSucceeded:
 		h.Service.UpdateOrderPaid(ctx, evt.PaymentSucceeded.Id)
@@ -159,4 +150,70 @@ func (h *OrderHandler) PaymentEvents(ctx context.Context, m kafka.Message) {
 	default:
 		slog.Warn("Unknown or missing event type in envelope")
 	}
+}
+
+func (h *Handler) processCreateOrderRequest(r *http.Request) ([]domain.Item, error) {
+	var req httppb.CreateOrderRequest
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := proto.Unmarshal(body, &req); err != nil {
+		return nil, err
+	}
+
+	if len(req.Items) == 0 {
+		return nil, fmt.Errorf("no items provided")
+	}
+
+	domainItems := make([]domain.Item, len(req.Items))
+	for i, item := range req.Items {
+		domainItems[i] = domain.Item{
+			ProductID: item.ProductId,
+		}
+	}
+
+	return domainItems, nil
+}
+
+func (h *Handler) respondWithCreateOrderSuccess(w http.ResponseWriter, order *domain.Order) {
+	protoOrder := &httppb.Order{
+		Id:     order.ID,
+		Status: string(order.Status),
+	}
+
+	for _, item := range order.Items {
+		protoOrder.Items = append(protoOrder.Items, &httppb.OrderItem{
+			ProductId: item.ProductID,
+		})
+	}
+
+	response := &httppb.CreateOrderResponse{
+		Order: protoOrder,
+	}
+
+	httputils.RespondProto(w, response, http.StatusCreated)
+}
+
+func (h *Handler) respondWithGetOrderSuccess(w http.ResponseWriter, order *domain.Order) {
+	protoOrder := &httppb.Order{
+		Id:        order.ID,
+		Status:    string(order.Status),
+		CreatedAt: order.CreatedAt.Format(time.RFC3339),
+		UpdatedAt: order.UpdatedAt.Format(time.RFC3339),
+	}
+
+	for _, item := range order.Items {
+		protoOrder.Items = append(protoOrder.Items, &httppb.OrderItem{
+			ProductId: item.ProductID,
+		})
+	}
+
+	response := &httppb.GetOrderResponse{
+		Order: protoOrder,
+	}
+
+	httputils.RespondProto(w, response, http.StatusOK)
 }

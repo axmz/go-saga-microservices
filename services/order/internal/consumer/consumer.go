@@ -13,10 +13,10 @@ import (
 
 type Consumer struct {
 	Reader  *kafka.Reader
-	Handler *handler.OrderHandler
+	Handler *handler.Handler
 }
 
-func New(r *kafka.Reader, h *handler.OrderHandler) *Consumer {
+func New(r *kafka.Reader, h *handler.Handler) *Consumer {
 	return &Consumer{Reader: r, Handler: h}
 }
 
@@ -33,13 +33,14 @@ func (c *Consumer) Start(ctx context.Context) error {
 			slog.Warn("Kafka read error:", "err", err)
 			continue
 		}
+		slog.Info("Kafka message", "topic", m.Topic, "partition", m.Partition, "offset", m.Offset)
 		switch m.Topic {
 		case "inventory.events":
 			c.Handler.InventoryEvents(ctx, m)
 		case "payment.events":
 			c.Handler.PaymentEvents(ctx, m)
 		default:
-			slog.Warn("Unhandled event")
+			slog.Warn("Unhandled event", "topic", m.Topic)
 		}
 	}
 }

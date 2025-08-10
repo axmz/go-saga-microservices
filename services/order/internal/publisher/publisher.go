@@ -3,7 +3,7 @@ package publisher
 import (
 	"context"
 
-	"github.com/axmz/go-saga-microservices/pkg/events"
+	"github.com/axmz/go-saga-microservices/pkg/proto/events"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/protobuf/proto"
