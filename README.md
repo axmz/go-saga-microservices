@@ -8,3 +8,4 @@ check timeouts
 deploy
 delete all kafka and start over
 separate http server from grpc
+ws not working

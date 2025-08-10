@@ -46,3 +46,7 @@ func (s *Service) ReleaseReservedItems(ctx context.Context, orderID string) {
 		return
 	}
 }
+
+func (s *Service) ResetAllProducts(ctx context.Context) error {
+	return s.Repo.ResetAllProducts(ctx)
+}

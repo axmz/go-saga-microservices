@@ -12,6 +12,7 @@ import (
 
 type InventoryClient interface {
 	GetProducts(ctx context.Context) (*httppb.GetProductsResponse, error)
+	ResetAll(ctx context.Context) error
 }
 
 type HTTPInventoryClient struct {
@@ -53,4 +54,22 @@ func (c *HTTPInventoryClient) GetProducts(ctx context.Context) (*httppb.GetProdu
 	}
 
 	return &protoResp, nil
+}
+
+func (c *HTTPInventoryClient) ResetAll(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/products/reset", nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("inventory service returned status: %d", resp.StatusCode)
+	}
+	return nil
 }

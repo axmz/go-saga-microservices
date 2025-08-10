@@ -29,7 +29,7 @@ func (h *Handler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	products, err := h.Service.GetProducts(r.Context())
 	if err != nil {
 		slog.Error("Inventory.GetProducts service error", "err", err)
-		h.httpInternalServerError(w, err)
+		httputils.ErrorInternal(w, err)
 		return
 	}
 
@@ -37,6 +37,17 @@ func (h *Handler) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("Inventory.GetProducts success", "count", len(protoProducts))
 	h.respondWithGetProductsResponse(w, protoProducts)
+}
+
+func (h *Handler) ResetAllProducts(w http.ResponseWriter, r *http.Request) {
+	if err := h.Service.ResetAllProducts(r.Context()); err != nil {
+		slog.Error("Inventory.ResetAllProducts service error", "err", err)
+		httputils.ErrorInternal(w, err)
+		return
+	}
+
+	slog.Info("Inventory.ResetAllProducts success")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) OrderEvents(ctx context.Context, event kafka.Message) {
@@ -96,10 +107,4 @@ func (h *Handler) toProtoProducts(products []domain.Product) []*httppb.Product {
 		}
 	}
 	return out
-}
-
-// ERROR HELPERS
-func (h *Handler) httpInternalServerError(w http.ResponseWriter, err error) {
-	slog.Error("HTTP 500 Internal server error", "err", err)
-	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }

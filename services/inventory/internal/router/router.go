@@ -9,5 +9,6 @@ import (
 func New(handlers *handler.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /products", handlers.GetProducts)
+	mux.HandleFunc("POST /products/reset", handlers.ResetAllProducts)
 	return mux
 }

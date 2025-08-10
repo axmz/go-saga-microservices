@@ -40,6 +40,10 @@ func (s *Service) GetProducts(ctx context.Context) ([]*httppb.Product, error) {
 	return resp.Products, nil
 }
 
+func (s *Service) ResetInventory(ctx context.Context) error {
+	return s.inventoryClient.ResetAll(ctx)
+}
+
 func (s *Service) CreateOrder(ctx context.Context, orderReq *httppb.CreateOrderRequest) (*httppb.Order, error) {
 	resp, err := s.orderClient.CreateOrder(ctx, orderReq)
 	if err != nil {

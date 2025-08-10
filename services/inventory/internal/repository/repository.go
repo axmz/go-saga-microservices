@@ -112,3 +112,12 @@ func (r *Repository) ReleaseReservedItems(ctx context.Context, orderID string) e
 	_, err := r.DB.GetConn().ExecContext(ctx, query, domain.StatusAvailable, orderID)
 	return err
 }
+
+func (r *Repository) ResetAllProducts(ctx context.Context) error {
+	const query = `
+		UPDATE products
+		SET status = $1, order_id = NULL
+	`
+	_, err := r.DB.GetConn().ExecContext(ctx, query, domain.StatusAvailable)
+	return err
+}

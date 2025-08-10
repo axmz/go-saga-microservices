@@ -39,6 +39,7 @@ func New(handlers *handler.Handler, svc *service.Service, renderer *renderer.Tem
 	mux.HandleFunc("POST /api/orders", handlers.APICreateOrder)
 	mux.HandleFunc("POST /api/payment-success", handlers.APIPaymentSuccess)
 	mux.HandleFunc("POST /api/payment-fail", handlers.APIPaymentFail)
+	mux.HandleFunc("POST /api/admin/reset-products", handlers.APIResetProducts)
 
 	return mux
 }

@@ -207,6 +207,16 @@ func (h *Handler) APIPaymentFail(w http.ResponseWriter, r *http.Request) {
 	h.respondWithPaymentFail(w)
 }
 
+func (h *Handler) APIResetProducts(w http.ResponseWriter, r *http.Request) {
+	if err := h.Service.ResetInventory(r.Context()); err != nil {
+		slog.Error("APIResetProducts failed", "err", err)
+		httputils.ErrorInternal(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // WS
 func (h *Handler) WSOrderStatus(w http.ResponseWriter, r *http.Request) {
 	orderID := r.PathValue(OrderIDPathParam)
