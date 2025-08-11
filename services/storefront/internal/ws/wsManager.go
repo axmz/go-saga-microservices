@@ -3,6 +3,7 @@ package ws
 import (
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -15,7 +16,8 @@ type WSManager struct {
 
 func NewWSManager() *WSManager {
 	return &WSManager{
-		clients: make(map[string]map[*websocket.Conn]bool),
+		clients:         make(map[string]map[*websocket.Conn]bool),
+		lastKnownStatus: make(map[string]string),
 	}
 }
 
@@ -57,6 +59,7 @@ func (m *WSManager) Broadcast(orderID string, status string) {
 	}
 	m.lastKnownStatus[orderID] = status
 
+	time.Sleep(time.Second * 3)
 	for conn := range m.clients[orderID] {
 		err := conn.WriteJSON(map[string]string{
 			"orderId": orderID,

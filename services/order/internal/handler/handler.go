@@ -76,17 +76,17 @@ func (h *Handler) OrderStatusWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Header.Get("Connection") != "Upgrade" || r.Header.Get("Upgrade") != "websocket" {
-		http.Error(w, "Not a websocket upgrade request", http.StatusBadRequest)
+		httputils.ErrorBadRequest(w, errors.New("not a websocket upgrade request"))
 		return
 	}
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		http.Error(w, "Webserver doesn't support hijacking", http.StatusInternalServerError)
+		httputils.ErrorInternal(w, errors.New("webserver doesn't support hijacking"))
 		return
 	}
 	conn, bufrw, err := hj.Hijack()
 	if err != nil {
-		http.Error(w, "Failed to hijack connection", http.StatusInternalServerError)
+		httputils.ErrorInternal(w, errors.New("failed to hijack connection"))
 		return
 	}
 	defer conn.Close()
