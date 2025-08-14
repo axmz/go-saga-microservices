@@ -33,12 +33,8 @@ func (s *Service) CreateOrder(ctx context.Context, items []domain.Item) (*domain
 		s.Sync.Remove(order.ID)
 	}()
 
-	err := s.Repo.CreateOrder(ctx, order)
-	if err != nil {
+	if err := s.Repo.CreateOrder(ctx, order); err != nil {
 		return nil, err
-	}
-	if err := s.Kafka.PublishOrderCreated(ctx, order); err != nil {
-		return nil, fmt.Errorf("order created but failed to emit event: %w", err)
 	}
 	slog.Info("[OrderService] Created order: %s, status: %s", order.ID, order.Status)
 	// TODO: handle ctx cancellation

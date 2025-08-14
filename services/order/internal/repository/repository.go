@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/axmz/go-saga-microservices/lib/adapter/db"
+	"github.com/axmz/go-saga-microservices/pkg/proto/events"
 	"github.com/axmz/go-saga-microservices/services/order/internal/domain"
+	"google.golang.org/protobuf/proto"
 )
 
 type Repository struct {
@@ -20,6 +22,11 @@ func New(db *db.DB) *Repository {
 }
 
 func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
+	tx, err := r.DB.GetConn().BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
 	var itemIDs string
 	for i, item := range o.Items {
 		if i > 0 {
@@ -28,12 +35,53 @@ func (r *Repository) CreateOrder(ctx context.Context, o *domain.Order) error {
 		itemIDs += item.ProductID
 	}
 	q := `INSERT INTO orders (id, item_ids, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`
-	_, err := r.DB.GetConn().ExecContext(ctx, q, o.ID, itemIDs, o.Status, o.CreatedAt, o.UpdatedAt)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, q, o.ID, itemIDs, o.Status, o.CreatedAt, o.UpdatedAt); err != nil {
+		_ = tx.Rollback()
 		return err
 	}
 
-	return nil
+	evtItems := make([]*events.Item, len(o.Items))
+	for i, it := range o.Items {
+		evtItems[i] = &events.Item{Id: it.ProductID}
+	}
+	env := &events.OrderEventEnvelope{
+		Event: &events.OrderEventEnvelope_OrderCreated{
+			OrderCreated: &events.OrderCreatedEvent{
+				Id:    o.ID,
+				Items: evtItems,
+			},
+		},
+	}
+	payload, err := proto.Marshal(env)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	if err := r.InsertOutbox(ctx, tx, OutboxMessage{
+		AggregateType: "order",
+		AggregateID:   o.ID,
+		EventType:     "OrderCreated",
+		Payload:       payload,
+	}); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *Repository) CreateOrderTx(ctx context.Context, tx *sql.Tx, o *domain.Order) error {
+	var itemIDs string
+	for i, item := range o.Items {
+		if i > 0 {
+			itemIDs += ","
+		}
+		itemIDs += item.ProductID
+	}
+	q := `INSERT INTO orders (id, item_ids, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`
+	_, err := tx.ExecContext(ctx, q, o.ID, itemIDs, o.Status, o.CreatedAt, o.UpdatedAt)
+	return err
 }
 
 func (r *Repository) GetOrder(ctx context.Context, id string) (*domain.Order, error) {

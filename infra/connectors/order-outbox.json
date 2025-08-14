@@ -1,0 +1,30 @@
+{
+    "name": "order-outbox",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "plugin.name": "pgoutput",
+        "database.hostname": "order-db",
+        "database.port": "5432",
+        "database.user": "order",
+        "database.password": "order",
+        "database.dbname": "order",
+        "slot.name": "order_outbox_min_slot",
+        "publication.autocreate.mode": "filtered",
+        "decimal.handling.mode": "string",
+        "time.precision.mode": "connect",
+        "tombstones.on.delete": "false",
+        "snapshot.mode": "never",
+        "topic.prefix": "cdc",
+        "table.include.list": "public.outbox",
+        "transforms": "route,extract",
+        "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+        "transforms.route.regex": "cdc\\.public\\.outbox",
+        "transforms.route.replacement": "order.events",
+        "transforms.extract.type": "io.debezium.transforms.ExtractNewRecordState",
+        "transforms.extract.drop.tombstones": "true",
+        "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "key.converter.schemas.enable": "false",
+        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "value.converter.schemas.enable": "false"
+    }
+}

@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -51,20 +53,23 @@ func (h *Handler) ResetAllProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) OrderEvents(ctx context.Context, event kafka.Message) {
-	var envelope events.OrderEventEnvelope
-
-	err := proto.Unmarshal(event.Value, &envelope)
-	if err != nil {
-		slog.Warn("Failed to unmarshal OrderEventEnvelope", "err", err)
+	data, ok := toProtoPayload(event.Value)
+	if !ok {
+		slog.Warn("OrderEvents: JSON outbox parse failed; dropping message")
 		return
 	}
 
+	var envelope events.OrderEventEnvelope
+	if err := proto.Unmarshal(data, &envelope); err != nil {
+		slog.Warn("OrderEvents: proto unmarshal failed", "err", err)
+		return
+	}
 	switch evt := envelope.Event.(type) {
 	case *events.OrderEventEnvelope_OrderCreated:
 		slog.Info("Order event: created", "topic", event.Topic, "partition", event.Partition, "offset", event.Offset, "orderId", evt.OrderCreated.Id)
 		h.Service.ReserveItems(ctx, evt.OrderCreated)
 	default:
-		slog.Warn("Unknown or missing event type in envelope")
+		slog.Warn("OrderEvents: unknown or missing event type")
 	}
 }
 
@@ -88,7 +93,6 @@ func (h *Handler) PaymentEvents(ctx context.Context, message kafka.Message) {
 }
 
 // RESPONSES
-
 func (h *Handler) respondWithGetProductsResponse(w http.ResponseWriter, products []*httppb.Product) {
 	resp := &httppb.GetProductsResponse{Products: products}
 	httputils.RespondProto(w, resp, http.StatusOK)
@@ -107,4 +111,25 @@ func (h *Handler) toProtoProducts(products []domain.Product) []*httppb.Product {
 		}
 	}
 	return out
+}
+
+func toProtoPayload(value []byte) ([]byte, bool) {
+	var outbox struct {
+		ID            string          `json:"id"`
+		AggregateType string          `json:"aggregate_type"`
+		AggregateID   string          `json:"aggregate_id"`
+		EventType     string          `json:"event_type"`
+		Payload       string          `json:"payload"`
+		Headers       json.RawMessage `json:"headers"`
+		CreatedAt     string          `json:"created_at"`
+		PublishedAt   *string         `json:"published_at"`
+	}
+	if err := json.Unmarshal(value, &outbox); err != nil {
+		return nil, false
+	}
+	b, err := base64.StdEncoding.DecodeString(outbox.Payload)
+	if err != nil {
+		return nil, false
+	}
+	return b, true
 }

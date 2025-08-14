@@ -50,11 +50,51 @@ services:
       POSTGRES_USER: order
       POSTGRES_PASSWORD: order
       POSTGRES_DB: order
+    # Enables logical replication for Debezium CDC
+    command: [
+      "postgres",
+      "-c", "wal_level=logical",
+      "-c", "max_replication_slots=10",
+      "-c", "max_wal_senders=10"
+    ]
     ports:
       - "5434:5432"
     volumes:
       - pg_order_data:/var/lib/postgresql/data
       - ./services/order/migrations:/docker-entrypoint-initdb.d
+
+  kafka-connect:
+    build:
+      context: ./infra/kafka-connect
+    container_name: kafka-connect
+    restart: unless-stopped
+    ports:
+      - "8086:8083"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=connect_configs
+      - OFFSET_STORAGE_TOPIC=connect_offsets
+      - STATUS_STORAGE_TOPIC=connect_statuses
+      - CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - STATUS_STORAGE_REPLICATION_FACTOR=1
+      - ENABLE_DEBEZIUM_SCRIPTING=true
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.storage.ByteArrayConverter
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+    depends_on:
+      - kafka
+      - order-db
+
+    volumes:
+      - ./infra/connectors:/configs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8083/connectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   kafka_data:
