@@ -1,7 +1,6 @@
 services:
   kafka:
     image: bitnami/kafka:latest
-    container_name: kafka
     environment:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
@@ -18,55 +17,11 @@ services:
       - "9092:9092"
     volumes:
       - kafka_data:/bitnami/kafka
-
-  redpanda-console:
-    image: docker.redpanda.com/redpandadata/console:latest
-    container_name: redpanda-console
-    ports:
-      - "8085:8080"
-    environment:
-      - KAFKA_BROKERS=kafka:9092
-    depends_on:
-      - kafka
     restart: unless-stopped
-
-  inventory-db:
-    image: postgres:17.5
-    container_name: inventory-db
-    environment:
-      POSTGRES_USER: inventory
-      POSTGRES_PASSWORD: inventory
-      POSTGRES_DB: inventory
-    ports:
-      - "5433:5432"
-    volumes:
-      - pg_inventory_data:/var/lib/postgresql/data
-      - ./services/inventory/migrations:/docker-entrypoint-initdb.d
-
-  order-db:
-    image: postgres:17.5
-    container_name: order-db
-    environment:
-      POSTGRES_USER: order
-      POSTGRES_PASSWORD: order
-      POSTGRES_DB: order
-    # Enables logical replication for Debezium CDC
-    command: [
-      "postgres",
-      "-c", "wal_level=logical",
-      "-c", "max_replication_slots=10",
-      "-c", "max_wal_senders=10"
-    ]
-    ports:
-      - "5434:5432"
-    volumes:
-      - pg_order_data:/var/lib/postgresql/data
-      - ./services/order/migrations:/docker-entrypoint-initdb.d
 
   kafka-connect:
     build:
       context: ./infra/kafka-connect
-    container_name: kafka-connect
     restart: unless-stopped
     ports:
       - "8086:8083"
@@ -87,7 +42,6 @@ services:
     depends_on:
       - kafka
       - order-db
-
     volumes:
       - ./infra/connectors:/configs:ro
     healthcheck:
@@ -96,7 +50,129 @@ services:
       timeout: 5s
       retries: 5
 
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    ports:
+      - "8085:8080"
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  inventory-db:
+    image: postgres:17.5
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: inventory
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_inventory_data:/var/lib/postgresql/data
+      - ./services/inventory/migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+  order-db:
+    image: postgres:17.5
+    environment:
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order
+      POSTGRES_DB: order
+    # Enables logical replication for Debezium CDC
+    command: [
+      "postgres",
+      "-c", "wal_level=logical",
+      "-c", "max_replication_slots=10",
+      "-c", "max_wal_senders=10"
+    ]
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_order_data:/var/lib/postgresql/data
+      - ./services/order/migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: inventory
+        MAIN: main.go
+    environment:
+      - GO_ENV=prod
+      - DB_HOST=inventory-db
+      - DB_PORT=5432
+      - DB_USER=inventory
+      - DB_PASSWORD=inventory
+      - DB_NAME=inventory
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - inventory-db
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    profiles: ["prod"]
+
+  order-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: order
+        MAIN: main.go
+    environment:
+      - GO_ENV=prod
+      - DB_HOST=order-db
+      - DB_PORT=5432
+      - DB_USER=order
+      - DB_PASSWORD=order
+      - DB_NAME=order
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - order-db
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+    profiles: ["prod"]
+
+  storefront-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: storefront
+        MAIN: main.go
+    environment:
+      - GO_ENV=prod
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    profiles: ["prod"]
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: payment
+        MAIN: main.go
+    environment:
+      - GO_ENV=prod
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    profiles: ["prod"]
+
 volumes:
   kafka_data:
   pg_inventory_data:
-  pg_order_data: 
+  pg_order_data:

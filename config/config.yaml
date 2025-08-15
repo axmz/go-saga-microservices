@@ -78,3 +78,15 @@ dev:
 
 prod:
   env: prod
+  storefront:
+    http:
+      host: storefront-service
+  order:
+    http:
+      host: order-service
+  payment:
+    http:
+      host: payment-service
+  inventory:
+    http:
+      host: inventory-service

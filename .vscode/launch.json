@@ -1,0 +1,43 @@
+{
+    "configurations": [
+        {
+            "name": "Storefront",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "./go-saga-microservices/services/storefront/cmd/main.go"
+        },
+        {
+            "name": "Inventory",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "./go-saga-microservices/services/inventory/cmd/main.go"
+        },
+        {
+            "name": "Payment",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "./go-saga-microservices/services/payment/cmd/main.go"
+        },
+        {
+            "name": "Order",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "./go-saga-microservices/services/order/cmd/main.go"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "All Services",
+            "configurations": [
+                "Storefront",
+                "Inventory",
+                "Payment",
+                "Order"
+            ]
+        }
+    ]
+}

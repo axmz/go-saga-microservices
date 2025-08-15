@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "Remote SSH host (user@host)"
+        required: true
+      dest:
+        description: "Destination directory on remote host"
+        required: false
+        default: "~/app"
+      ref:
+        description: "Git ref to deploy"
+        required: false
+        default: "main"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'go-saga-microservices/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add remote host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ github.event.inputs.host }}" >> ~/.ssh/known_hosts
+
+      - name: Rsync project to remote
+        run: |
+          rsync -az --delete --exclude='.git' ./ ${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/
+
+      - name: Build and start production stack
+        run: |
+          ssh ${{ github.event.inputs.host }} "cd ${{ github.event.inputs.dest }} && make prod"
+
+      - name: Show running containers
+        if: always()
+        run: |
+          ssh ${{ github.event.inputs.host }} "cd ${{ github.event.inputs.dest }} && docker compose ps"

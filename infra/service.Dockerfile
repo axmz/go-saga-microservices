@@ -4,7 +4,6 @@ ARG MAIN=main.go
 WORKDIR /app/services/${SERVICE}
 COPY services/${SERVICE}/go.mod services/${SERVICE}/go.sum ./
 # TODO: deal with this somehow
-COPY ./lib /app/lib
 COPY ./pkg /app/pkg
 RUN go mod download
 COPY . /app
