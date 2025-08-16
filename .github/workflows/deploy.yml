@@ -18,40 +18,40 @@ on:
         description: "Git ref to deploy"
         required: false
         default: "main"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'go-saga-microservices/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
 
-      - name: Write SSH key to file
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add remote host to known_hosts
         run: |
+          mkdir -p ~/.ssh
           ssh-keyscan -H "${{ github.event.inputs.host }}" >> ~/.ssh/known_hosts
 
       - name: Rsync project to remote
         run: |
-          rsync -az -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
-            --delete --exclude='.git' ./ \
-            "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/"
+          rsync -az --delete --exclude='.git' ./ "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/"
 
       - name: Build and start production stack
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-            "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
-            "cd ${{ github.event.inputs.dest }} && make prod"
+          ssh "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" "cd ${{ github.event.inputs.dest }} && make prod"
 
       - name: Show running containers
+        if: always()
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-            "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
-            "cd ${{ github.event.inputs.dest }} && docker compose ps"
+          ssh "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" "cd ${{ github.event.inputs.dest }} && docker compose ps"
