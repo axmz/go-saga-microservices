@@ -29,15 +29,15 @@ infra-down id:
 
 prod p:
 	@echo "Building production stack..."
-	GO_ENV=prod docker compose --profile prod -p go-saga-microservices-prod up -d --build
+	GO_ENV=prod docker-compose --profile prod -p go-saga-microservices-prod up -d --build
 
 prod-up pu:
 	@echo "Starting production stack..."
-	GO_ENV=prod docker compose --profile prod -p go-saga-microservices-prod up -d
+	GO_ENV=prod docker-compose --profile prod -p go-saga-microservices-prod up -d
 
 prod-down pd:
 	@echo "Stopping production stack..."
-	docker compose --profile prod -p go-saga-microservices-prod down
+	docker-compose --profile prod -p go-saga-microservices-prod down
 
 # PROTOBUF
 .PHONY: buf-install buf-gen
