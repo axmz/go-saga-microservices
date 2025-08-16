@@ -6,7 +6,7 @@ Saga pattern is used for distributed transactions.
 Debezium is used as automated Outbox pattern.
 The project is deployed to GCP (ephemeral IP)
 
-![alt text](image.png)
+![alt text](go-saga-microservices.jpg)
 
 ## TODO:
 
