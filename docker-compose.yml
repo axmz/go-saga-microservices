@@ -101,7 +101,7 @@ services:
         SERVICE: inventory
         MAIN: main.go
     environment:
-      - GO_ENV=prod
+      - GO_ENV=${GO_ENV}
       - DB_HOST=inventory-db
       - DB_PORT=5432
       - DB_USER=inventory
@@ -124,7 +124,7 @@ services:
         SERVICE: order
         MAIN: main.go
     environment:
-      - GO_ENV=prod
+      - GO_ENV=${GO_ENV}
       - DB_HOST=order-db
       - DB_PORT=5432
       - DB_USER=order
@@ -147,7 +147,7 @@ services:
         SERVICE: storefront
         MAIN: main.go
     environment:
-      - GO_ENV=prod
+      - GO_ENV=${GO_ENV}
     ports:
       - "8080:8080"
     depends_on:
@@ -163,7 +163,7 @@ services:
         SERVICE: payment
         MAIN: main.go
     environment:
-      - GO_ENV=prod
+      - GO_ENV=${GO_ENV}
       - KAFKA_BROKER=kafka:9092
     depends_on:
       - kafka

@@ -18,11 +18,26 @@ dev: infra-up
 
 infra-up iu:
 	@echo "Starting infrastructure services..."
-	docker-compose -p go-saga-microservices-dev up -d --build
+	GO_ENV=dev docker-compose -p go-saga-microservices-dev up -d --build
 
 infra-down id:
 	@echo "Stopping infrastructure services..."
 	docker-compose -p go-saga-microservices-dev down
+
+# PRODUCTION
+.PHONY: prod prod-up prod-down
+
+prod p:
+	@echo "Building production stack..."
+	GO_ENV=prod docker compose --profile prod -p go-saga-microservices-prod up -d --build
+
+prod-up pu:
+	@echo "Starting production stack..."
+	GO_ENV=prod docker compose --profile prod -p go-saga-microservices-prod up -d
+
+prod-down pd:
+	@echo "Stopping production stack..."
+	docker compose --profile prod -p go-saga-microservices-prod down
 
 # PROTOBUF
 .PHONY: buf-install buf-gen
@@ -42,18 +57,3 @@ buf-gen: buf-install
 	@buf generate
 	@echo "go mod tidy in pkg/proto"
 	@cd ./pkg/proto && go mod tidy
-
-# PRODUCTION
-.PHONY: prod prod-up prod-down
-
-prod p:
-	@echo "Building production stack..."
-	docker compose --profile prod -p go-saga-microservices-prod up -d --build
-
-prod-up pu:
-	@echo "Starting production stack..."
-	docker compose --profile prod -p go-saga-microservices-prod up -d 
-
-prod-down pd:
-	@echo "Stopping production stack..."
-	docker compose --profile prod -p go-saga-microservices-prod down

@@ -3,7 +3,7 @@
 
 {{ if .Order }}
 <p><strong>Order ID:</strong> <span id="order-id">{{ .Order.Id }}</span></p>
-<p><strong>Status:</strong> <span id="order-status">{{ .Order.Status }}</span></p>
+<p><strong>Status:</strong> <span id="order-status">{{ .Order.Status }} - Status will update shortly via WebSocket</span></p>
 <ul>
     {{ range .Order.Items }}
     <li>Product ID: {{ .ProductId }}</li>

@@ -4,7 +4,6 @@ package http;
 
 option go_package = "github.com/axmz/go-saga-microservices/pkg/proto/http;http";
 
-// Product for inventory
 message Product {
   int64 id = 1;
   string name = 2;
@@ -13,12 +12,10 @@ message Product {
   double price = 5;
 }
 
-// Used in CreateOrderRequest
 message OrderItem {
   string product_id = 1;
 }
 
-// Order for responses
 message Order {
   string id = 1;
   repeated OrderItem items = 2;
@@ -27,7 +24,6 @@ message Order {
   string updated_at = 5;
 }
 
-// Order Service HTTP APIs
 message CreateOrderRequest {
   repeated OrderItem items = 1;
 }
@@ -44,7 +40,6 @@ message GetOrderResponse {
   Order order = 1;
 }
 
-// Payment Service HTTP APIs
 message PaymentSuccessRequest {
   string order_id = 1;
 }
@@ -61,14 +56,12 @@ message PaymentFailResponse {
   bool success = 1;
 }
 
-// Inventory Service HTTP APIs
 message GetProductsRequest {}
 
 message GetProductsResponse {
   repeated Product products = 1;
 }
 
-// WebSocket messages
 message OrderStatusUpdate {
   string order_id = 1;
   string status = 2;
