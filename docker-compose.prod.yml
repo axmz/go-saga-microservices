@@ -1,9 +1,12 @@
 services:
   inventory-service:
     image: ${REGISTRY:-axmz}/go-saga-microservices-inventory:${TAG:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: ./infra/service.Dockerfile
+      platforms:
+        - ${DOCKER_PLATFORM:-linux/amd64}
       args:
         SERVICE: inventory
         MAIN: main.go
@@ -24,9 +27,12 @@ services:
 
   order-service:
     image: ${REGISTRY:-axmz}/go-saga-microservices-order:${TAG:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: ./infra/service.Dockerfile
+      platforms:
+        - ${DOCKER_PLATFORM:-linux/amd64}
       args:
         SERVICE: order
         MAIN: main.go
@@ -47,9 +53,12 @@ services:
 
   storefront-service:
     image: ${REGISTRY:-axmz}/go-saga-microservices-storefront:${TAG:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: ./infra/service.Dockerfile
+      platforms:
+        - ${DOCKER_PLATFORM:-linux/amd64}
       args:
         SERVICE: storefront
         MAIN: main.go
@@ -63,9 +72,12 @@ services:
 
   payment-service:
     image: ${REGISTRY:-axmz}/go-saga-microservices-payment:${TAG:-latest}
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: ./infra/service.Dockerfile
+      platforms:
+        - ${DOCKER_PLATFORM:-linux/amd64}
       args:
         SERVICE: payment
         MAIN: main.go
