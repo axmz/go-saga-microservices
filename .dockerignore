@@ -1,0 +1,22 @@
+# Reduce context size for service image builds
+__debug_bin*
+.git
+.gitignore
+.github/
+.vscode/
+*.md
+Dockerfile
+**/*.log
+**/node_modules/
+**/tmp/
+**/.DS_Store
+**/.env
+
+# Dev tooling files not needed in images
+**/.air.toml
+**/.idea/
+**/.vscode/
+
+# Compose files don't need to be in image context
+docker-compose.yml
+docker-compose.prod.yml

@@ -6,12 +6,14 @@ help:
 	@echo "docker network connect go-saga-microservices-dev_default devcontainer"
 	@echo "then start services in debug mode from vscode"
 	@echo "Available commands:"
-	@echo "  dev              - Start infrastructure and all services"
-	@echo "  infra-up         - Start infrastructure services (Kafka, DBs)"
+	@echo "  dev              - Start development infra only (no microservices)"
+	@echo "  infra-up         - Start development infrastructure services (Kafka, DBs)"
 	@echo "  infra-down       - Stop infrastructure services"
-	@echo "  prod          - Start production docker-compose stack"
+	@echo "  prod             - Start production docker-compose stack (prebuilt images)"
 	@echo "  prod-down        - Stop production docker-compose stack"
 	@echo "  prod-restart     - Restart production docker-compose stack"
+	@echo "  images-build     - Build service images (compose prod)"
+	@echo "  images-push      - Push service images (compose prod)"
 
 # DEV
 dev: infra-up
@@ -29,15 +31,33 @@ infra-down id:
 
 prod p:
 	@echo "Building production stack..."
-	GO_ENV=prod docker-compose --profile prod -p go-saga-microservices-prod up -d --build
+	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d
 
 prod-up pu:
 	@echo "Starting production stack..."
-	GO_ENV=prod docker-compose --profile prod -p go-saga-microservices-prod up -d
+	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d --build
 
 prod-down pd:
 	@echo "Stopping production stack..."
-	docker-compose --profile prod -p go-saga-microservices-prod down
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod down
+
+# IMAGES
+.PHONY: images-build images-push docker-login
+
+REGISTRY?=axmz
+TAG?=latest
+
+docker-login:
+	@echo "Logging in to Docker Hub"
+	@docker login
+
+images-build:
+	@echo "Building service images from prod compose..."
+	REGISTRY=$(REGISTRY) TAG=$(TAG) docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+
+images-push: docker-login
+	@echo "Pushing images to Docker Hub from prod compose..."
+	REGISTRY=$(REGISTRY) TAG=$(TAG) docker-compose -f docker-compose.yml -f docker-compose.prod.yml push
 
 # PROTOBUF
 .PHONY: buf-install buf-gen

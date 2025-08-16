@@ -1,0 +1,79 @@
+services:
+  inventory-service:
+    image: ${REGISTRY:-axmz}/go-saga-microservices-inventory:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: inventory
+        MAIN: main.go
+    environment:
+      - GO_ENV=${GO_ENV}
+      - DB_HOST=inventory-db
+      - DB_PORT=5432
+      - DB_USER=inventory
+      - DB_PASSWORD=inventory
+      - DB_NAME=inventory
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - inventory-db
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+  order-service:
+    image: ${REGISTRY:-axmz}/go-saga-microservices-order:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: order
+        MAIN: main.go
+    environment:
+      - GO_ENV=${GO_ENV}
+      - DB_HOST=order-db
+      - DB_PORT=5432
+      - DB_USER=order
+      - DB_PASSWORD=order
+      - DB_NAME=order
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - order-db
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+
+  storefront-service:
+    image: ${REGISTRY:-axmz}/go-saga-microservices-storefront:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: storefront
+        MAIN: main.go
+    environment:
+      - GO_ENV=${GO_ENV}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    restart: unless-stopped
+
+  payment-service:
+    image: ${REGISTRY:-axmz}/go-saga-microservices-payment:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: ./infra/service.Dockerfile
+      args:
+        SERVICE: payment
+        MAIN: main.go
+    environment:
+      - GO_ENV=${GO_ENV}
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
