@@ -49,4 +49,4 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no \
             "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
-            "cd ${{ github.event.inputs.dest }} && docker compose ps"
+            "cd ${{ github.event.inputs.dest }} && docker-compose ps"
