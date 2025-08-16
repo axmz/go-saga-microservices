@@ -10,6 +10,10 @@ on:
       host:
         description: "Remote host IP"
         required: true
+      port:
+        description: "SSH port"
+        required: false
+        default: "22"
       dest:
         description: "Destination directory on remote host"
         required: false
@@ -30,28 +34,52 @@ jobs:
 
       - name: Write SSH key to file
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          # Prefer secret; fallback to repo key if secret is not set
+          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          elif [ -f "./github-actions-key" ]; then
+            echo "No SSH_PRIVATE_KEY secret set; using ./github-actions-key from repo (not recommended)."
+            cp ./github-actions-key ~/.ssh/id_ed25519
+          else
+            echo "ERROR: No SSH key provided. Set repository secret SSH_PRIVATE_KEY or add ./github-actions-key." >&2
+            exit 1
+          fi
           chmod 600 ~/.ssh/id_ed25519
+          # Generate pubkey (for fingerprint/logging only)
+          if ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub 2>/dev/null; then
+            chmod 644 ~/.ssh/id_ed25519.pub
+            echo "Using SSH key fingerprint:"
+            ssh-keygen -lf ~/.ssh/id_ed25519 || true
+          fi
 
       - name: Add remote host to known_hosts
         run: |
-          ssh-keyscan -H "${{ github.event.inputs.host }}" >> ~/.ssh/known_hosts
+          set -euo pipefail
+          ssh-keyscan -T 30 -p "${{ github.event.inputs.port }}" -H "${{ github.event.inputs.host }}" >> ~/.ssh/known_hosts
+
+      - name: Quick SSH connectivity check
+        run: |
+          set -euo pipefail
+          ssh -p "${{ github.event.inputs.port }}" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
+            "echo 'SSH auth ok'"
 
       - name: Rsync project to remote
         run: |
-          rsync -az -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
+          rsync -az -e "ssh -p ${{ github.event.inputs.port }} -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no" \
             --delete --exclude='.git' ./ \
             "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/"
 
       - name: Build and start production stack
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+          ssh -p "${{ github.event.inputs.port }}" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
             "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
             "cd ${{ github.event.inputs.dest }} && make prod"
 
       - name: Show running containers
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+          ssh -p "${{ github.event.inputs.port }}" -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
             "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
             "cd ${{ github.event.inputs.dest }} && docker compose ps"
