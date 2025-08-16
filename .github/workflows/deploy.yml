@@ -3,8 +3,12 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
+      user:
+        description: "SSH username"
+        required: true
+        default: "afmoroz"
       host:
-        description: "Remote SSH host (user@host)"
+        description: "Remote host IP"
         required: true
       dest:
         description: "Destination directory on remote host"
@@ -41,13 +45,13 @@ jobs:
 
       - name: Rsync project to remote
         run: |
-          rsync -az --delete --exclude='.git' ./ ${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/
+          rsync -az --delete --exclude='.git' ./ "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/"
 
       - name: Build and start production stack
         run: |
-          ssh ${{ github.event.inputs.host }} "cd ${{ github.event.inputs.dest }} && make prod"
+          ssh "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" "cd ${{ github.event.inputs.dest }} && make prod"
 
       - name: Show running containers
         if: always()
         run: |
-          ssh ${{ github.event.inputs.host }} "cd ${{ github.event.inputs.dest }} && docker compose ps"
+          ssh "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" "cd ${{ github.event.inputs.dest }} && docker compose ps"
