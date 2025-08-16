@@ -5,5 +5,9 @@ apply configs from adapters
 use interfaces
 separate http server from grpc
 
-teraform: e2-micro instal docker, docker compose, rsync, make
+teraform: 
+e2-micro 
+http https ssh-key external ip
+mkdir app 
+instal docker, docker permissions, docker compose, rsync, make
 vscode debug describe better
