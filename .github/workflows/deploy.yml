@@ -33,10 +33,18 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Rsync project to remote
+      - name: Clean and sync deployment files to remote
         run: |
+          # Clean the destination directory first
+          ssh -o StrictHostKeyChecking=no \
+            "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}" \
+            "rm -rf ${{ github.event.inputs.dest }}/* || true"
+          
+          # Sync only the required deployment files
           rsync -az -e "ssh -o StrictHostKeyChecking=no" \
-            --delete --exclude='.git' ./ \
+            docker-compose.yml \
+            docker-compose.prod.yml \
+            Makefile \
             "${{ github.event.inputs.user }}@${{ github.event.inputs.host }}:${{ github.event.inputs.dest }}/"
 
       - name: Build and start production stack
