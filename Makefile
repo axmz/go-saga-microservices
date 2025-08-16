@@ -33,7 +33,7 @@ prod p:
 	@echo "Pulling images for production stack..."
 	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod pull
 	@echo "Starting production stack from pulled images (no build)..."
-	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d --no-build
+	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d
 
 prod-up pu:
 	@echo "Starting production stack..."
