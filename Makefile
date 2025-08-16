@@ -7,7 +7,7 @@ help:
 	@echo "then start services in debug mode from vscode"
 	@echo "Available commands:"
 	@echo "  dev              - Start development infra only (no microservices)"
-	@echo "  infra-up         - Start development infrastructure services (Kafka, DBs)"
+	@echo "  infra-up         - Start development infrastructure services (Redpanda Kafka API, Debezium Server, DBs)"
 	@echo "  infra-down       - Stop infrastructure services"
 	@echo "  prod             - Start production docker-compose stack (prebuilt images)"
 	@echo "  prod-down        - Stop production docker-compose stack"
@@ -20,28 +20,28 @@ dev: infra-up
 
 infra-up iu:
 	@echo "Starting infrastructure services..."
-	GO_ENV=dev docker-compose -p go-saga-microservices-dev up -d --build
+	GO_ENV=dev docker compose -p go-saga-microservices-dev up -d --build
 
 infra-down id:
 	@echo "Stopping infrastructure services..."
-	docker-compose -p go-saga-microservices-dev down
+	docker compose -p go-saga-microservices-dev down
 
 # PRODUCTION
 .PHONY: prod prod-up prod-down
 
 prod p:
 	@echo "Pulling images for production stack..."
-	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod pull
+	TAG=$(TAG) GO_ENV=prod docker compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod pull
 	@echo "Starting production stack from pulled images (no build)..."
-	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d
+	TAG=$(TAG) GO_ENV=prod docker compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d
 
 prod-up pu:
 	@echo "Starting production stack..."
-	TAG=$(TAG) GO_ENV=prod docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d --build
+	TAG=$(TAG) GO_ENV=prod docker compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod up -d --build
 
 prod-down pd:
 	@echo "Stopping production stack..."
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod down
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml -p go-saga-microservices-prod down
 
 # IMAGES
 .PHONY: images-build images-push docker-login
@@ -55,11 +55,11 @@ docker-login:
 
 images-build:
 	@echo "Building service images from prod compose..."
-	REGISTRY=$(REGISTRY) TAG=$(TAG) docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+	REGISTRY=$(REGISTRY) TAG=$(TAG) docker compose -f docker-compose.yml -f docker-compose.prod.yml build
 
 images-push: docker-login
 	@echo "Pushing images to Docker Hub from prod compose..."
-	REGISTRY=$(REGISTRY) TAG=$(TAG) docker-compose -f docker-compose.yml -f docker-compose.prod.yml push
+	REGISTRY=$(REGISTRY) TAG=$(TAG) docker compose -f docker-compose.yml -f docker-compose.prod.yml push
 
 # PROTOBUF
 .PHONY: buf-install buf-gen
